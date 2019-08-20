@@ -1,0 +1,21 @@
+({
+    doInit : function(component, event, helper) {
+        component.set('v.OppColumns', [
+            {label: 'Opportunity name', fieldName: 'OpplinkName', type: 'url',typeAttributes: { label: { fieldName: 'Name', target: '_blank' }}},
+            {label: 'Account Name', fieldName: 'AccountId', type: 'url',typeAttributes: { label: { fieldName: 'AccountName', target: '_blank'  }}},
+            {label: 'Close Date', fieldName: 'CloseDate', type: 'date'},
+            {label: 'Stage', fieldName: 'StageName', type: 'picklist'},
+            {label: 'Contract ', fieldName: 'ContractId',type:'url', typeAttributes: { label: { fieldName: 'AmendContName', target: '_blank'  }} }  
+        ]);      
+        
+        
+        component.set('v.QuoteColumns', [
+            {label: 'Quote', fieldName: 'quoteLink', type: 'url',typeAttributes: { label: { fieldName: 'QuoteNumber', target: '_blank' }}},
+            {label: 'Opportunity Name', fieldName: 'OppId', type: 'url',typeAttributes: { label: { fieldName: 'OppName', target: '_blank'  }}},
+            {label: 'Start Date', fieldName: 'Contract_Start_Date__c', type: 'date'},
+            {label: 'End Date', fieldName: 'Contract_End_Date__c', type: 'date'}            
+        ]);
+        
+      helper.fetchAmendmentData(component, event);
+    }
+})

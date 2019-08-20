@@ -1,0 +1,44 @@
+<aura:component implements="force:lightningQuickAction" access="global" controller="ContractItemsConfigController">
+    <aura:attribute name="Opportunities" type="List"/>  
+    <aura:attribute name="OppList" type="Opportunity[]"/>  
+    <aura:attribute name="QuoteList" type="Quote[]"/>   
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="OppColumns" type="List"/>  
+    <aura:attribute name="QuoteColumns" type="List"/>  
+    
+     <aura:html tag="style">        
+        .slds-modal__footer{
+         display: none !important; 
+        }
+    </aura:html>
+    
+    
+    <div style="height: 300px">
+        <lightning:card variant="Narrow" title="Opportunity(s)" iconName="standard:opportunity" >           
+            <p class="slds-p-horizontal_small">
+                <lightning:datatable
+                                     keyField="id"
+                                     data="{! v.OppList }"
+                                     columns="{! v.OppColumns }"
+                                     hideCheckboxColumn="true" />
+                
+            </p>          
+        </lightning:card>
+        
+        <lightning:card variant="Narrow" title="Quote(s)" iconName="standard:quotes" >           
+            <p class="slds-p-horizontal_small">
+                <lightning:datatable
+                                     keyField="id"
+                                     data="{! v.QuoteList }"
+                                     columns="{! v.QuoteColumns }"
+                                     hideCheckboxColumn="true" />
+                
+            </p>
+        </lightning:card> 
+    </div>
+    <div class="slds-docked-form-footer">
+        <span class="slds-hidden">
+        <button type="button" class="slds-button slds-button_brand ">Cancel</button>
+        </span>
+    </div>
+</aura:component>

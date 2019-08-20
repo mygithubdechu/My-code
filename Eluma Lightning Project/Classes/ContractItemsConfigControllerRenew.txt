@@ -1,0 +1,190 @@
+public class ContractItemsConfigControllerRenew {
+    @AuraEnabled
+    public static  Map<String,List<ContractLineItem__c>> getContractLineItems(String ContractId){   
+        Map<String,List<ContractLineItem__c>> prodLineItems = new Map<String,List<ContractLineItem__c>>();
+        String key = '';
+        for(ContractLineItem__c item :  [SELECT Id,Status__c,Quote_Line_Item__r.PricebookEntry.Pricebook2Id ,Quote_Line_Item__r.PricebookEntry.Pricebook2.Name, Quote_Line_Item__r.Product2.Name,Quote_Line_Item__r.Product2Id ,Quote_Line_Item__r.Quantity ,Quote_Line_Item__r.LineNumber , Quote_Line_Item__r.ListPrice,Quote_Line_Item__r.Discount,Quote_Line_Item__r.UnitPrice,Quote_Line_Item__r.Quote.Opportunity.recordTypeId from ContractLineItem__c where Contract__c =:ContractId and Status__c = 'Active' and Quote_Line_Item__c <> null ORDER BY Quote_Line_Item__r.Product2.Name ]){
+            key = item.Quote_Line_Item__r.PricebookEntry.Pricebook2Id+'-'+item.Quote_Line_Item__r.PricebookEntry.Pricebook2.Name;
+            if(prodLineItems.containsKey(key)){
+                prodLineItems.get(key).add(item);
+            }else{
+                prodLineItems.put(key,new List<ContractLineItem__c>{item});
+            }
+        }       
+        return prodLineItems;
+    }
+    
+    public static  Map<String,List<QuoteLineItem>> getQuoteLineItemsByPriceBook(Set<Id> quoteLineItemIds){ 
+        
+        Map<String,List<QuoteLineItem>> prodLineItems = new Map<String,List<QuoteLineItem>>();
+        String key = '';
+        List<QuoteLineItem> quoteLineItems = ContractConfigHelperRenew.getQuoteLineItems(quoteLineItemIds);
+        for(QuoteLineItem item :  quoteLineItems){
+            key = item.PricebookEntry.Pricebook2Id;
+            if(prodLineItems.containsKey(key)){
+                prodLineItems.get(key).add(item);
+            }else{
+                prodLineItems.put(key,new List<QuoteLineItem>{item});
+            }
+        }       
+        return prodLineItems;
+    }
+    
+    
+    @AuraEnabled
+    public static String createAmendentQuoteAndOpportunity(Map<String,List<LineItemsWrapper>> lineItems, Id contractId){
+        contract newContract;
+        if(lineItems <> null){  
+            
+            Map<Id,Decimal> qlQuantityMap = new Map<Id,Decimal> ();
+            Map<Id,Decimal> qlUnitPriceMap = new Map<Id,Decimal> ();
+            Map<Id,Decimal> qlDiscountMap = new Map<Id,Decimal> ();
+            
+            for(String pbId : lineItems.keySet()){
+                for(LineItemsWrapper wrap : lineItems.get(pbId)){                 
+                    qlQuantityMap.put(wrap.quoteLineItemId,wrap.quantity);
+                    qlUnitPriceMap.put(wrap.quoteLineItemId,wrap.unitPrice);
+                    qlDiscountMap.put(wrap.quoteLineItemId,wrap.discount);
+                }
+            }
+            
+            Map<String,List<QuoteLineItem>> quoteLinePBMap = getQuoteLineItemsByPriceBook(qlQuantityMap.keySet());  
+            
+            List<contract> newcontractList= new List<contract>();
+            List<Opportunity> oppList = new List<Opportunity>(); 
+            Contract cont = ContractConfigHelperRenew.getContract(contractId);
+            newContract = cont.clone();
+            newContract.Status='Draft';
+            DateTime oldcontractEndDate= cont.EndDate;
+            newcontract.StartDate = Date.newInstance(oldcontractEndDate.year(), oldcontractEndDate.month(),oldcontractEndDate.day()+1);
+            newcontract.EndDate=Date.newInstance(oldcontractEndDate.year(), oldcontractEndDate.month()+12,oldcontractEndDate.day());
+            
+            try{
+                insert newContract; 
+            }catch(DMLException ex){
+                system.debug('Exception : '+ex.getLineNumber());
+                system.debug('Exception : '+ex.getMessage());
+                return 'ERROR::'+ex.getMessage();
+            }
+            
+            
+            /*List<ContractLineItem__c>  conLinItemList =ContractConfigHelperRenew.getContractLineItem(cont.Id);
+            List<ContractLineItem__c> NewCLIList= new  List<ContractLineItem__c>();
+            for(ContractLineItem__c CLI :conLinItemList){
+                ContractLineItem__c newCLI=CLI.clone();
+                newCLI.Contract__c=newcontract.Id;
+                NewCLIList.add(newCLI);
+            }
+            try{
+                //insert NewCLIList;
+            }catch(DMLException ex){
+                system.debug('Exception : '+ex.getLineNumber());
+                system.debug('Exception : '+ex.getMessage());
+                return 'ERROR::'+ex.getMessage();
+            }*/
+            
+            Contract contract =[select id,AccountID,ContractNumber,StartDate from contract where ID=: newContract.Id];
+            for(String pbId : lineItems.keySet()){  
+                oppList.add(ContractConfigHelperRenew.createOpportunites(new Map<String,String>{'Name'=>'Renewed Opportunity #','OppRecordType'=>quoteLinePBMap.get(pbId).get(0).Quote.Opportunity.recordTypeId,'PriceBookId'=>pbId,'Type'=>'Renewal Business_13_Months'},contract));                
+            }
+            if(oppList.size() > 0){
+                try{
+                    insert oppList; 
+                }catch(DMLException ex){
+                    return 'ERROR::'+ex.getMessage();
+                }
+                
+                for(opportunity opp: oppList){
+                    
+                    system.debug('opp.Id :'+opp.Id);
+                    newContract.Opportunity__c=opp.Id;
+                    system.debug(' newContract.Opportunity__c :'+ newContract.Opportunity__c);
+                    
+                    if(newcontractList.contains(newContract)){
+                        
+                    }else{
+                        newcontractList.add(newContract);
+                    }
+                    
+                }
+                
+                try{
+                    Update newcontractList; 
+                }catch(DMLException ex){
+                    system.debug('Exception : '+ex.getLineNumber());
+                    system.debug('Exception : '+ex.getMessage());
+                    return 'ERROR::'+ex.getMessage();
+                }
+                OpportunityLineItem ol;
+                List<OpportunityLineItem> opplineItems = new List<OpportunityLineItem>();
+                List<Quote> quoteList = new List<Quote>();
+                Quote q;
+                List<QuoteLineItem> quoteLineList ;
+                for(Opportunity opp : oppList){
+                    quoteLineList = quoteLinePBMap.get(opp.Pricebook2Id);
+                    
+                    for(QuoteLineItem ql : quoteLineList){
+                        ol = new OpportunityLineItem();
+                        ol.Product2Id = ql.Product2Id;
+                        ol.Quantity = qlQuantityMap.get(ql.id);    
+                        //ol.UnitPrice = ql.UnitPrice;
+                        ol.UnitPrice = qlUnitPriceMap.get(ql.Id);
+                        ol.discount = qlDiscountMap.get(ql.Id);
+                        ol.PricebookEntryId = ql.PricebookEntryId;
+                        ol.OpportunityId = opp.id;
+                        ol.TotalPrice=ql.TotalPrice;
+                        opplineItems.add(ol);
+                    } 
+                    q = new Quote();                                    
+                    q.Name = 'Renewed Quote #'+contract.contractNumber;
+                    q.ContractId = contract.id;
+                    quoteList.add(ContractConfigHelperRenew.createQuote(opp,quoteLineList.get(0),q));
+                }
+                
+                try{                     
+                    insert quoteList;  
+                    String resp = ContractConfigHelperRenew.synchQuotes(oppList,quoteList);
+                    insert opplineItems;
+                    getnewQuoteLineItems(newcontract.id);
+                    
+                    ContractConfigHelper.createContractLineItems(oppList);
+                    
+                    if(resp == 'SUCCESS')  return JSON.serialize(oppList); 
+                }catch(Exception ex){ 
+                    
+                    system.debug('Exception occoured at line: '+ex.getLineNumber());
+                    system.debug('Exception occoured at : '+ex.getMessage());
+                    
+                    return 'ERROR::'+ex.getStackTraceString();
+                }
+                
+            }
+            
+        }
+        
+        return null;
+    }
+    @AuraEnabled
+    public static Map<String,List<Sobject>> getOppAndQuotes(List<Id> AmendedOpps){
+        
+        List<Opportunity> oppList = [Select id,Name,AccountId,Account.Name,Amended_Contract__r.ContractNumber,Amended_Contract__c,CloseDate,StageName from Opportunity where id In : AmendedOpps Order by createdDate DESC];
+        List<Quote> quotes =  [Select id,QuoteNumber,Name,OpportunityId,Opportunity.Name,ExpirationDate,Contract_Start_Date__c,Contract_End_Date__c from Quote where OpportunityId In :AmendedOpps Order by createdDate DESC ];
+        return new Map<String,List<Sobject>>{'Opportunity' => oppList,'Quote' => quotes };
+            }
+    
+    public static void getnewQuoteLineItems(Id contractID){
+        
+        Map<String,ContractLineItem__c> contractlineitemlist=new Map<String,ContractLineItem__c>( [select id,name from ContractLineItem__c where Contract__r.id=:contractID]);
+        system.debug('contractlineitemlist : '+contractlineitemlist);
+    } 
+    public class LineItemsWrapper{
+        @AuraEnabled
+        public Decimal quantity {get;set;}
+        @AuraEnabled
+        public Id quoteLineItemId {get;set;}
+        @AuraEnabled
+        public Decimal unitPrice{set;get;}
+        @AuraEnabled
+        public Decimal discount{set;get;}
+    }
+}

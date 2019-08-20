@@ -1,0 +1,371 @@
+@istest
+public class TestContractItemsConfigControllerRenew {
+    @isTest
+    static void testgetContractLineItems(){
+        List<Contract>  contactList = new List<contract>();
+        
+        Id RecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Other').getRecordTypeId();
+        Account acc= new Account(Name='TestAccount',School_Type__c='Public',Account_Status__c='Prospect');
+        try{
+            insert acc; 
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        Account Accresult=acc;
+        
+        Contract con= new contract();
+        con.AccountId= Accresult.Id;
+        con.StartDate=Date.newInstance(2019, 12, 8);
+        con.EndDate=Date.newInstance(2019, 12, 9);
+        con.OwnerExpirationNotice='15';
+        con.Status='Draft';
+        try{
+            insert con;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        con.Status='Activated';
+        try{
+            Update con;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        
+        String conId= Con.Id;
+        
+        Opportunity opp = new Opportunity();
+        Id oppRecordTypeId = Schema.SObjectType.Opportunity.getRecordTypeInfosByName().get('Other').getRecordTypeId();
+        opp.RecordTypeId= oppRecordTypeId;
+        opp.Name='Test';
+        opp.AccountId= Accresult.Id;
+        opp.Type='Renewal';
+        opp.LeadSource='Web';
+        opp.ForecastCategoryName='Pipeline';
+        opp.StageName='Prospecting';
+        opp.CloseDate=Date.newInstance(2019, 12, 9);
+        try{
+            Insert opp;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        
+        
+        Product2 prod = new Product2(Name = 'Laptop X200', 
+                                     Family = 'Hardware');
+        try{
+            insert prod;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        
+        
+        Id pricebookId = Test.getStandardPricebookId();
+        
+        PricebookEntry standardPrice = new PricebookEntry(
+            Pricebook2Id = pricebookId, Product2Id = prod.Id,
+            UnitPrice = 10000, IsActive = true);
+        try{
+            insert standardPrice;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        
+        Pricebook2 customPB = new Pricebook2(Name='Custom Pricebook', isActive=true);
+        try{
+            insert customPB;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        
+        
+        PricebookEntry customPrice = new PricebookEntry(
+            Pricebook2Id = customPB.Id, Product2Id = prod.Id,
+            UnitPrice = 12000, IsActive = true);
+        try{
+            insert customPrice;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        
+        
+        Quote q= new Quote();
+        q.Name= 'Test';
+        q.ContractId=Con.Id;
+        q.OpportunityId=opp.id;
+        q.Pricebook2Id = customPB.Id;
+        try{
+            insert q;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        
+        
+        QuoteLineItem QlineItem = new QuoteLineItem();
+        QlineItem.Product2Id= prod.Id;
+        QlineItem.UnitPrice=400;
+        QlineItem.Quantity=1;
+        QlineItem.QuoteId=q.Id;
+        QlineItem.PricebookEntryId=customPrice.id;
+        try{
+            insert QlineItem;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        
+        ContractLineItem__c conlineItem = new ContractLineItem__c(Contract__c=Con.Id);
+        conlineItem.Contract__c=Con.Id;
+        conlineItem.Quote_Line_Item__c=QlineItem.Id;
+        conlineItem.Status__c='Active';
+        try{
+            insert conlineItem;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        
+        ContractItemsConfigControllerRenew.getContractLineItems(conId);
+        set<Id> QlineItemset = new set<Id>();
+        QlineItemset.add(QlineItem.Id);
+        ContractItemsConfigControllerRenew.getQuoteLineItemsByPriceBook(QlineItemset);
+        
+    }
+    @isTest
+    static void TestMethod2(){
+        
+        Id RecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Other').getRecordTypeId();
+        system.debug('RecordTypeId : '+RecordTypeId);
+        Account acc= new Account(Name='TestAccount',School_Type__c='Public',Account_Status__c='Prospect');
+        try{
+            insert acc;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        
+        Account Accresult=acc;
+        
+        Contract con= new contract();
+        con.AccountId= Accresult.Id;
+        con.StartDate=Date.newInstance(2019, 12, 8);
+        con.EndDate=Date.newInstance(2019, 12, 9);
+        con.OwnerExpirationNotice='15';
+        con.Status='Draft';
+        try{
+            insert con;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+       
+        con.Status='Activated';
+        try{
+            Update con;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+       
+        
+        String conId= Con.Id;
+        
+        Opportunity opp = new Opportunity();
+        Id oppRecordTypeId = Schema.SObjectType.Opportunity.getRecordTypeInfosByName().get('Other').getRecordTypeId();
+        opp.RecordTypeId= oppRecordTypeId;
+        opp.Name='Test';
+        opp.AccountId= Accresult.Id;
+        opp.Type='Renewal';
+        opp.LeadSource='Web';
+        opp.ForecastCategoryName='Pipeline';
+        opp.StageName='Prospecting';
+        opp.CloseDate=Date.newInstance(2019, 12, 9);
+        try{
+            Insert opp;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        Product2 prod = new Product2(Name = 'Laptop X200', 
+                                     Family = 'Hardware');
+        try{
+            insert prod;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+        }
+        
+        
+        Id pricebookId = Test.getStandardPricebookId();
+        system.debug('pricebookId : '+pricebookId);
+        
+        PricebookEntry standardPrice = new PricebookEntry(
+            Pricebook2Id = pricebookId, Product2Id = prod.Id,
+            UnitPrice = 10000, IsActive = true);
+         try{
+             insert standardPrice;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+        }
+        
+       
+        
+        Pricebook2 customPB = new Pricebook2(Name='Custom Pricebook', isActive=true);
+        try{
+            insert customPB;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+        }
+        
+        
+        PricebookEntry customPrice = new PricebookEntry(
+            Pricebook2Id = customPB.Id, Product2Id = prod.Id,
+            UnitPrice = 12000, IsActive = true);
+        try{
+            insert customPrice;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+        }
+       
+        
+        Quote q= new Quote();
+        q.Name= 'Test';
+        q.ContractId=Con.Id;
+        q.OpportunityId=opp.id;
+        q.Pricebook2Id = customPB.Id;
+         try{
+             insert q;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+        }
+       
+       
+        
+        
+        QuoteLineItem QlineItem = new QuoteLineItem();
+        QlineItem.Product2Id= prod.Id;
+        QlineItem.UnitPrice=400;
+        QlineItem.Quantity=1;
+        QlineItem.QuoteId=q.Id;
+        QlineItem.PricebookEntryId=customPrice.id;
+        try{
+              insert QlineItem;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+        }
+       
+        
+        ContractLineItem__c conlineItem = new ContractLineItem__c(Contract__c=Con.Id);
+        conlineItem.Contract__c=Con.Id;
+        conlineItem.Quote_Line_Item__c=QlineItem.Id;
+        conlineItem.Status__c='Active';
+        try{
+              insert conlineItem;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+        }
+       
+        
+        
+        List<ContractItemsConfigControllerRenew.LineItemsWrapper> LineItemsWrapperList = new List<ContractItemsConfigControllerRenew.LineItemsWrapper>();
+        ContractItemsConfigControllerRenew.LineItemsWrapper LineItemsWrapper = new ContractItemsConfigControllerRenew.LineItemsWrapper();
+        LineItemsWrapper.quantity = 2;
+        LineItemsWrapper.quoteLineItemId=QlineItem.Id;
+        LineItemsWrapperList.add(LineItemsWrapper);
+        
+        Map<String,List<ContractItemsConfigControllerRenew.LineItemsWrapper>> lineItems = new Map<String, List<ContractItemsConfigControllerRenew.LineItemsWrapper>> ();
+        
+        lineItems.put(customPB.Id, LineItemsWrapperList);
+        system.debug('Test class pricebookId : '+pricebookId);
+        system.debug('Test class lineItems : '+lineItems);
+        
+        ContractItemsConfigControllerRenew.createAmendentQuoteAndOpportunity(lineItems,Con.Id);
+        
+        
+    }
+    @isTest
+    static void testmethod3(){
+        List<opportunity> Opplist= new List<opportunity>();
+        Id RecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Other').getRecordTypeId();
+        system.debug('RecordTypeId : '+RecordTypeId);
+        Account acc= new Account(Name='TestAccount',School_Type__c='Public',Account_Status__c='Prospect');
+       try{
+            insert acc;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        
+        Account Accresult=acc;
+        
+        Contract con= new contract();
+        con.AccountId= Accresult.Id;
+        con.StartDate=Date.newInstance(2019, 12, 8);
+        con.EndDate=Date.newInstance(2019, 12, 9);
+        con.OwnerExpirationNotice='15';
+        con.Status='Draft';
+                try{
+            insert con;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+       
+        con.Status='Activated';
+        try{
+            Update con;
+        }catch(Exception ex){
+            system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+            
+        }
+        String conId= Con.Id;
+        
+        for(Integer i=0;i<=10;i++){            
+            Opportunity opp = new Opportunity();
+            Id oppRecordTypeId = Schema.SObjectType.Opportunity.getRecordTypeInfosByName().get('Other').getRecordTypeId();
+            opp.RecordTypeId= oppRecordTypeId;
+            opp.Name='Test'+i;
+            opp.AccountId= Accresult.Id;
+            opp.Type='Renewal';
+            opp.LeadSource='Web';
+            opp.ForecastCategoryName='Pipeline';
+            opp.StageName='Prospecting';
+            opp.CloseDate=Date.newInstance(2019, 12, 9);
+            Opplist.add(opp);
+            
+        }
+        try{
+             Insert Opplist;
+        }catch(Exception ex){
+             system.debug('Exception occourred: '+ex.getMessage()+' at '+ex.getLineNumber());
+        }
+       
+        List<Id> AmendedId = new List<Id>(); 
+        for(opportunity opploop:Opplist){
+            AmendedId.add(opploop.id);            
+        }
+        ContractItemsConfigControllerRenew.getOppAndQuotes(AmendedId);
+        
+    }
+    
+}

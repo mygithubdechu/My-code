@@ -1,0 +1,45 @@
+({
+    getContractItems : function(component, event) {       
+        var action = component.get("c.getContractLineItems");
+        action.setParams({
+            "ContractId" : component.get('v.recordId')
+        });
+        action.setCallback(this,function(response){           
+            if(response.getState() == 'SUCCESS'){
+                var result = response.getReturnValue();  
+                var lineItemsList = [];  
+                var splitArr = [];
+                for(var key in result){
+                    splitArr = key.split('-');                  
+                    lineItemsList.push({key: splitArr[1], value: result[key]});
+                }                   
+                component.set("v.lineItemsList", lineItemsList); 
+            }
+        });        
+        $A.enqueueAction(action);
+    },    
+    createAmendementOppAndQuote : function(component, event,pbLineItemArr) {       
+        var action = component.get("c.createAmendentQuoteAndOpportunity");
+        action.setParams({           
+            "lineItems" : pbLineItemArr  ,
+            "contractId" :  component.get("v.recordId")
+        });        
+        action.setCallback(this,function(response){
+            if(response.getState() == 'SUCCESS'){  
+                var opps =  [];
+                opps =  JSON.parse(response.getReturnValue());
+                var oppList = [];
+                for(var i =0 ; i < opps.length;i++){ 
+                    oppList.push(opps[i].Id);
+                }
+                
+                component.set("v.Opportunities", oppList); 
+                component.set("v.isShow", false);   
+                
+            }else{
+                alert('Something went wrong.'+response.getReturnValue()); 
+            }
+        });        
+        $A.enqueueAction(action);
+    }
+})

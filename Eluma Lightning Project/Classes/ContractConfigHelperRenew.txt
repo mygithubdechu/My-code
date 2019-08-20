@@ -1,0 +1,129 @@
+public class ContractConfigHelperRenew {
+    
+    public static Contract getContract(Id contractId){
+        DescribeSObjectResult describeResult = Contract.getSObjectType().getDescribe();	
+        List<String> fieldNames = new List<String>( describeResult.fields.getMap().keySet());	
+        List<Contract> contractlist= Database.query('select '+String.join(fieldNames,',')+' from Contract where Id=:contractId');
+       //return [SELECT Id,Name,AccountId,StartDate,ContractNumber,eLumaTerms__c,OwnerExpirationNotice,Status from Contract where Id =:contractId];
+    return contractlist[0];
+    }
+    
+    public static List<ContractLineItem__c> getContractLineItem(Id ContractId){
+        DescribeSObjectResult describeResult = ContractLineItem__c.getSObjectType().getDescribe();	
+        List<String> fieldNames = new List<String>( describeResult.fields.getMap().keySet());	
+        List<ContractLineItem__c> ContractLineItemList= Database.query('select '+String.join(fieldNames,',')+' from ContractLineItem__c where Contract__r.id=:contractId');
+        
+        return ContractLineItemList;
+        
+    }
+    
+    
+    public static List<QuoteLineItem> getnewQuoteLineItems(ID newcontractid){
+        system.debug(' newquoteLineItemIds in another class  :'+newcontractid);
+        return  [SELECT Id,PricebookEntryId from QuoteLineItem where Quote.Opportunity.Amended_Contract__r.id =:newcontractid];
+    }
+    
+    public static List<QuoteLineItem> getQuoteLineItems(Set<Id> quoteLineItemIds){
+        return  [SELECT Id,PricebookEntryId,PricebookEntry.Pricebook2Id,Product2Id,quantity ,Quote.ContactId,UnitPrice, Quote.Phone,Quote.Email,Quote.Fax ,
+                 Quote.BillingName,Quote.ShippingName,Quote.Opportunity.recordTypeId,Quote.BillingCity,
+                 Quote.BillingCountry,Quote.BillingLatitude,Quote.BillingLongitude,
+                 Quote.BillingStreet,Quote.ShippingCity,Quote.ShippingCountry,totalprice,
+                 Quote.ShippingHandling ,Quote.ShippingLatitude ,Quote.ShippingLongitude,Quote.ShippingPostalCode ,
+                 Quote.ShippingState,Quote.ShippingStreet  from QuoteLineItem where Id In :quoteLineItemIds];
+    }
+    
+    public static Opportunity createOpportunites(Map<String,String> oppDataList,Contract cont){ 
+      
+        Opportunity opp = new Opportunity();               
+        opp.Name = oppDataList.get('Name')+cont.contractNumber;
+        
+        opp.CloseDate = cont.StartDate + 1; 
+        opp.RecordTypeId = oppDataList.get('OppRecordType');
+        opp.Pricebook2Id = oppDataList.get('PriceBookId');
+        opp.StageName = 'Proposal';
+        opp.AccountId = cont.AccountId;
+        opp.Amended_Contract__c = cont.id;  
+        opp.Type = 'Renewal';
+        //opp.Type = oppDataList.get('Type');
+       
+        return opp;
+    }
+    
+    public static Quote createQuote(Opportunity opp,QuoteLineItem ql,Quote q){       
+        q.OpportunityId = opp.id;
+        q.Status = 'Draft'; 
+        q.Pricebook2Id = opp.Pricebook2Id;
+        q.ContactId = ql.Quote.ContactId;
+        q.Phone = ql.Quote.Phone;
+        q.Email = ql.Quote.Email;
+        q.Fax = ql.Quote.Fax;
+        q.BillingName = ql.Quote.BillingName;
+        q.ShippingName = ql.Quote.ShippingName; 
+        q.BillingCity = ql.Quote.BillingCity; 
+        q.BillingCountry = ql.Quote.BillingCountry; 
+        q.BillingLatitude = ql.Quote.BillingLatitude; 
+        q.BillingLongitude = ql.Quote.BillingLongitude; 
+        q.BillingStreet = ql.Quote.BillingStreet; 
+        q.ShippingCity = ql.Quote.ShippingCity; 
+        q.ShippingCountry = ql.Quote.ShippingCountry; 
+        q.ShippingHandling = ql.Quote.ShippingHandling; 
+        q.ShippingLatitude = ql.Quote.ShippingLatitude; 
+        q.ShippingLongitude = ql.Quote.ShippingLongitude; 
+        q.ShippingPostalCode = ql.Quote.ShippingPostalCode; 
+        q.ShippingState = ql.Quote.ShippingState; 
+        q.ShippingStreet = ql.Quote.ShippingStreet; 
+        return q;
+    }
+    
+    
+    public static String synchQuotes(List<Opportunity> oppList,List<Quote> quotes){
+        for(Opportunity opp : oppList){
+            for(Quote q : quotes){
+                if(opp.id == q.OpportunityId){
+                    opp.SyncedQuoteId = q.id;
+                } 
+            } 
+        }
+        try{
+            update oppList;
+            return  'SUCCESS';
+        }catch(DMLException ex){
+            system.debug('Exception : '+ex.getLineNumber());
+                    system.debug('Exception : '+ex.getMessage());
+            return 'ERROR::'+ex.getMessage();
+        }        
+    }
+    
+    
+    /* This method is used to create amended contract line items,invoking from CreateAmendmentContractsAfterOppClosed trigger.*/ 
+    public static void createContractLineItems(List<Opportunity> closedOpps ){
+        List<QuoteLineItem> quoteLineItems = [Select id,Quantity,UnitPrice,ServiceDate,Quote.ContractId,Quote.Contract_Start_Date__c,Quote.Contract_End_Date__c from QuoteLineItem where QuoteId In : [Select id from Quote where OpportunityID In : closedOpps and ContractId <> null] ];
+        System.debug('Quote Line item found: '+quoteLineItems.size());
+        if(quoteLineItems.size() > 0){
+            ContractLineItem__c contLineItem ;
+            List<ContractLineItem__c> amendmentContracts = new List<ContractLineItem__c> ();
+            for(quoteLineItem quotlineItem : quoteLineItems){
+                contLineItem = new ContractLineItem__c();
+                contLineItem.Status__c = 'Active';
+                contLineItem.Contract__c = quotlineItem.Quote.ContractId;
+                contLineItem.Start_Date__c = Date.valueOf(quotlineItem.Quote.Contract_Start_Date__c);
+                contLineItem.End_Date__c = Date.valueOf( quotlineItem.Quote.Contract_End_Date__c );
+                contLineItem.Quote_Line_Item__c = quotlineItem.id;
+                amendmentContracts.add(contLineItem);
+                
+            }
+            
+            if(amendmentContracts.size() > 0){
+                try{  
+                    System.debug('Created Contact line items: '+amendmentContracts.size());
+                    insert amendmentContracts;
+                }catch(DMLException ex){
+                    system.debug('Exception : '+ex.getLineNumber());
+                    system.debug('Exception : '+ex.getMessage());
+                    system.debug('ERROR::'+ex.getCause());
+                }
+            }
+            
+        }
+    }
+}

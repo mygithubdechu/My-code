@@ -1,0 +1,39 @@
+({
+	fetchAmendmentData : function(component, event) {          
+        var action = component.get("c.getOppAndQuotes");
+        action.setParams({
+            "AmendedOpps" : component.get("v.Opportunities")
+        });   
+        
+        action.setCallback(this,function(response){           
+            if(response.getState() == 'SUCCESS'){ 
+                var row;
+                var resp = JSON.stringify(response.getReturnValue()).toString();                  
+                var rowOpps = JSON.parse(resp).Opportunity;
+                var rowQuotes = JSON.parse(resp).Quote;
+                for (var i = 0; i < rowOpps.length; i++) {
+                    row = rowOpps[i];                   
+                    row.AccountName = row.Account.Name;
+                    row.AmendContName = row.Amended_Contract__r.ContractNumber;
+                    row.AccountId =  '/'+row.AccountId;
+                    row.OpplinkName = '/'+row.Id;
+                    row.ContractId = '/'+row.Amended_Contract__c;
+                }
+                          
+                for (var i = 0; i < rowQuotes.length; i++) {
+                    row = rowQuotes[i];   
+                    row.quoteLink = '/'+row.Id;
+                    row.OppName = row.Opportunity.Name;
+                    row.OppId = '/'+row.OpportunityId;                  
+                }
+                 component.set("v.OppList", rowOpps);              
+                component.set("v.QuoteList", rowQuotes); 
+                console
+            }else{
+                alert('Something went wrong.'+response.getState()); 
+            }
+        });   
+        
+        $A.enqueueAction(action);
+	}
+})

@@ -1,0 +1,116 @@
+({
+        
+    getContractItems : function(component, event, helper) {        
+        helper.getContractItems(component, event);        
+    },
+    
+    selectAllBoxes : function(component, event, helper){        
+        /* var arrBoxPack = component.find("boxpack");       
+        if(Array.isArray(arrBoxPack)){           
+            var isAllSelect = component.find("selectAllBox").get("v.checked");
+          
+            if(isAllSelect){
+                 for(var i=0;i< arrBoxPack.length;i++){
+                    component.find("boxpack")[i].set("v.checked",true); 
+                    component.set("v.selectBoxCount",arrBoxPack.length);   }              
+            }else{
+                for(var i=0;i<arrBoxPack.length;i++){
+                    component.find("boxpack")[i].set("v.checked",false); 
+                    component.set("v.selectBoxCount",0);
+                }
+            }
+        }*/
+    },
+    
+    handleSelect : function(component, event){   
+        var ischecked = event.getSource().get("v.checked");         
+        if(ischecked){
+            component.set("v.selectBoxCount",component.get("v.selectBoxCount")+1);
+        }else{
+            component.set("v.selectBoxCount",component.get("v.selectBoxCount")-1);  
+            //var allRows = component.find("allRows");
+            // if(component.get("v.selectBoxCount") == 0){
+            //   component.find("selectAllBox").set("v.checked",false);
+            // }
+        }
+    },
+    
+    createAmendement: function(component, event, helper){        
+        var allRows = component.find("allRows");
+        var pricebookId ; 
+        var pbLineItemArr ={};      
+        if(Array.isArray(allRows)){  
+            var indexArr = [];
+            var uncheckedReq = [];
+            for(var i=0;i < allRows.length;i++){                      
+                if(component.find("boxpack")[i].get("v.checked") && component.find("newQuantity")[i].get('v.value') == ''){                      
+                    indexArr.push(i);
+                    
+                }else if(!component.find("boxpack")[i].get("v.checked")  && component.find("newQuantity")[i].get('v.required')){
+                    uncheckedReq.push(i);
+                    
+                }
+            }
+            
+            if(uncheckedReq.length > 0){
+                 
+                uncheckedReq.forEach(function(ind){
+                    component.find("newQuantity")[ind].set("v.required",false);
+                });   
+            }
+           // console.log('indexArr ',indexArr)
+            if(indexArr.length > 0 ){
+                
+                indexArr.forEach(function(index){
+                    component.find("newQuantity")[index].set("v.required",true);
+                    component.find("newQuantity")[index].focus();
+                });                
+            }else{   
+                
+                event.getSource().set("v.disabled", true);
+                document.getElementById("loader").style.display = "block";
+                for(var i=0;i < allRows.length;i++){ 
+                    if(component.find("boxpack")[i].get("v.checked")){ 
+                        pricebookId = component.find("boxpack")[i].get('v.value'); 
+						                      
+                        pbLineItemArr[pricebookId] = pbLineItemArr[pricebookId] || [];
+                        pbLineItemArr[pricebookId].push({'quantity':component.find("newQuantity")[i].get('v.value'),'quoteLineItemId' :component.find("boxpack")[i].get('v.name') });                      
+                    }  
+                }
+                                      
+               helper.createAmendementOppAndQuote(component, event,pbLineItemArr);
+            }
+        }else{
+            
+            if(component.find("boxpack").get("v.checked")){
+                 
+                if(component.find("newQuantity").get('v.value') == ''){
+                    component.find("newQuantity").set("v.required",true);
+                    component.find("newQuantity").focus();
+                    return false;
+                }else{
+                    
+                    event.getSource().set("v.disabled", true);
+                    document.getElementById("loader").style.display = "block";                 
+                    pricebookId = component.find("boxpack").get('v.value');  
+                    pbLineItemArr[pricebookId] = pbLineItemArr[pricebookId] || [];
+                    pbLineItemArr[pricebookId].push({
+                        
+                        'quantity':component.find("newQuantity").get('v.value'),
+                        'quoteLineItemId' :component.find("boxpack").get('v.name'),
+                        'unitPrice': component.find("salesPrice").get('v.value'),
+                        'discount': component.find("discount").get('v.value'),
+                        
+                    });
+                    
+                    console.log('Line item new values: '+JSON.stringify(pbLineItemArr))
+                    
+                    helper.createAmendementOppAndQuote(component, event,pbLineItemArr);
+                }
+            }else if(!component.find("boxpack").get("v.checked")  && component.find("newQuantity").get('v.required')){
+                
+                component.find("newQuantity").set("v.required",false);
+            }
+        }
+    }    
+})
