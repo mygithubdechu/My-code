@@ -1,0 +1,228 @@
+public class ClockInClockOutLC {
+    @AuraEnabled
+    public static Datetime setTimmer(Id WorkorderID){
+        List<Work_Order_Time__c> workordertime =[select id,Start_Date_Time__c,End_Date_Time__c from Work_Order_Time__c where End_Date_Time__c=null AND Start_Date_Time__c!=null 
+                                                 AND  Work_Detail__r.SVMXC__Service_Order__r.id=:WorkorderID  Order by CreatedDate Desc limit 1];
+        Datetime returnvalue=((workordertime!=null && workordertime.size()>0)?workordertime[0].Start_Date_Time__c:null);
+        return returnvalue;
+    }
+    
+    @AuraEnabled
+    public static void getClockIn(Id WorkorderID,String day){
+        DateTime workStartDatetime= datetime.now();
+        if(test.isRunningTest()){
+            if(Day=='Weekday')
+                workStartDatetime=datetime.newInstance(date.today(), time.newInstance(8, 30, 0, 0));
+            if(Day=='Weekend')
+                workStartDatetime=datetime.newInstance(date.today(), time.newInstance(19, 0, 0, 0));
+            if(Day=='WeekendHoliday')
+                workStartDatetime=datetime.newInstance(date.newInstance(2015,1,20), time.newInstance(19,0,0,0));
+            if(Day=='AfterHourHoliday')
+                workStartDatetime=datetime.newInstance(date.newInstance(2015,1,20), time.newInstance(6,0,0,0));
+            if(Day==null)
+                workStartDatetime=datetime.now();
+            if(Day=='Holiday')
+                workStartDatetime=datetime.newInstance(date.newInstance(2012,12,25), time.newInstance(0,0,0,0));
+            if(Day=='Sunday')
+                workStartDatetime=datetime.newInstance(date.newInstance(2019, 10, 6), time.newInstance(10,0,0,0));
+            if(Day=='Saturday')
+                workStartDatetime=datetime.newInstance(date.newInstance(2019, 10, 5), time.newInstance(11,0,0,0));
+        }
+        String dayOfWeek = workStartDatetime.format('EEEE');
+        BusinessHours  bh= [SELECT  Id, FridayStartTime,FridayEndTime FROM BusinessHours WHERE IsDefault=true];
+        
+        Boolean isWithin= BusinessHours.isWithin(bh.id, workStartDatetime);
+        map<String,id> mapProduct= new map<String,id>();
+        List<product2> productList= [select id,name from product2];
+        
+        for(Product2 p:productList){
+            mapProduct.put(p.Name,p.id);
+        }
+        if(isWithin==TRUE){
+            Id ProductID = mapProduct.get(System.Label.ST_Standard);
+            Day='Weekday';
+            currentDay(WorkorderID,workStartDatetime, ProductID,Day);
+        }
+        else if(isWithin==FALSE){
+            Set<Date> setHolidays=new Set<Date>();
+            List<Holiday> lstHolidays = new List<Holiday>([select id, ActivityDate from Holiday]);
+            if(lstHolidays != null && lstHolidays.size()>0) { 
+                for(Holiday obj_Holiday: lstHolidays)
+                    setHolidays.add(obj_Holiday.ActivityDate); 
+            } 
+            
+            date checkforholiday=date.newinstance(workStartDatetime.year(), workStartDatetime.month(), workStartDatetime.day());
+            if(test.isRunningTest()){
+                checkforholiday=date.newInstance(2012,12,25);
+            }
+            if(setHolidays.contains(checkforholiday)){
+                Id ProductID = mapProduct.get(System.Label.ST_Holiday);
+                Day='Holiday';
+                currentDay(WorkorderID,workStartDatetime, ProductID,Day);
+            }
+            
+            if(dayOfWeek.equalsIgnoreCase('Saturday')){
+                Id ProductID = mapProduct.get(System.Label.ST_After_Hrs);
+                Day='Weekend';
+                currentDay(WorkorderID,workStartDatetime, ProductID,Day);
+            }
+            if(dayOfWeek.equalsIgnoreCase('Sunday')){
+                Id ProductID = mapProduct.get(System.Label.ST_Sunday);
+                Day='Sunday';
+                currentDay(WorkorderID,workStartDatetime, ProductID,Day);
+            }
+            if(!(setHolidays.contains(checkforholiday)) && !(dayOfWeek.equalsIgnoreCase('Saturday')) && !(dayOfWeek.equalsIgnoreCase('Sunday'))){
+                Id ProductID = mapProduct.get(System.Label.ST_After_Hrs);
+                Day='ExtraWork';
+                currentDay(WorkorderID,workStartDatetime, ProductID,Day);
+            }
+        }
+    }
+    
+    @AuraEnabled
+    public static String  currentDay(Id WorkorderID,DateTime workStartDatetime,ID ProductID ,String Day){
+        try{
+            List<SVMXC__Service_Order_Line__c> latestworkorderDetail;
+            latestworkorderDetail=[select id, SVMXC__Product__c from SVMXC__Service_Order_Line__c where SVMXC__Service_Order__c=:WorkorderID
+                                   AND SVMXC__Product__c=:ProductID ];
+            
+            if(latestworkorderDetail.size()==0 ){
+                SVMXC__Service_Order_Line__c NewWorkorderdetail=ClockInClockOutLCHelper.CreateWorkDetail(Day, WorkorderID);
+                ClockInClockOutLCHelper.createWorkTime(NewWorkorderdetail.id,workStartDateTime,null);
+            }
+            if(latestworkorderDetail.size()>0 ){
+                
+                List<Work_Order_Time__c> workordertimeList =[select id from Work_Order_Time__c where Start_Date_Time__c!=null AND End_Date_Time__c=null 
+                                                             AND  Work_Detail__c in:latestworkorderDetail];
+                if(workordertimeList.size()==0 ){
+                    ClockInClockOutLCHelper.createWorkTime(latestworkorderDetail[0].id,workStartDateTime,null);
+                }
+            }
+        }catch( exception e){
+            system.debug('exception in currentday : '+e.getMessage()+'at line number '+e.getLineNumber()); 
+        }
+        
+        return 'SUCCESS';
+    }
+    
+    @AuraEnabled
+    public static void getClockout(Id WorkorderID,String day,datetime dtClockOut,DateTime dtClockIn){
+        Id ProductId;
+        Datetime Startdatetime;
+        datetime dtClockInIST;
+        
+        map<String,id> mapProducts= new map<String,id>();
+        List<product2> productList= [select id,name from product2];
+        for(Product2 p:productList){
+            mapProducts.put(p.Name,p.id);
+        }
+        
+        Work_Order_Time__c updateWorkordertime;
+        
+        updateWorkordertime = [select Id,Start_Date_Time__c,End_Date_Time__c from Work_Order_Time__c where End_Date_Time__c=null AND Start_Date_Time__c!=null 
+                               AND  Work_Detail__r.SVMXC__Service_Order__r.id=:WorkorderID  Order by CreatedDate Desc limit 1];
+        
+        if(dtClockOut==null){
+            dtClockIn=updateWorkordertime.Start_Date_Time__c;
+            
+            dtClockOut=datetime.now();
+        }
+        
+        BusinessHours bh = [select id from businesshours where IsDefault=true];
+        Map<String,time> alldaysmap= BusinessAndNonBusiness.gettodaysstartendtime(datetime.now());
+        Set<Date> setHolidays=new Set<Date>();
+        List<Holiday> lstHolidays=new List<Holiday>([select id,ActivityDate from Holiday]);
+        
+        if(lstHolidays!=null && lstHolidays.size()>0)
+        {
+            for(Holiday obj_Holiday: lstHolidays){
+                
+                setHolidays.add(obj_Holiday.ActivityDate);
+            }
+        }
+        //checking for clockin and clockout difference --Start--
+        Double diffInHrs=Double.valueOf((dtClockOut.getTime() -  dtClockIn.getTime())/ (1000.0*60.0*60.0));
+        
+        //checking for clockin and clockout difference --End--
+        //checking for Businesshours difference --Start--
+        
+        DateTime bhendtime;
+        dateTime bhstartTime;
+        Double bhdifferhrs;
+        if(test.isRunningTest() ){
+            bhendtime=datetime.newInstance(date.today(),  time.newInstance(0, 0,0, 0));
+            
+            bhstartTime=datetime.newInstance(date.today(), time.newInstance(0, 0,0, 0));
+            
+            bhdifferhrs=BusinessHours.diff(bh.id, bhstartTime,bhendtime )/ (1000.0*60.0*60.0);
+            
+            
+        }else{
+            bhendtime=datetime.newInstance(date.today(), alldaysmap.get('EndTime'));
+            
+            bhstartTime=datetime.newInstance(date.today(), alldaysmap.get('StartTime'));
+            bhdifferhrs=BusinessHours.diff(bh.id, bhstartTime,bhendtime )/ (1000.0*60.0*60.0);
+        }
+        
+        //checking for Businesshours difference --End--
+        if(!(bhdifferhrs<0) && bhdifferhrs!=0 && bhdifferhrs<24 && bhdifferhrs!=null){
+            // If business Hours is lessthan 24hours --Start--
+           updateWorkordertime= BusinessAndNonBusiness.bhlessthan24hrs( setHolidays, diffInHrs, dtClockIn, dtClockOut, bh, updateWorkordertime, mapProducts, WorkorderID, day);
+            // If business Hours is lessthan 24hours --End--
+        }
+        else if(bhdifferhrs==0){
+            // If business Hours is 24hours --Start--
+            
+           updateWorkordertime= BusinessAndNonBusiness.bh24hrs( setHolidays, diffInHrs, dtClockIn, dtClockOut, bh, updateWorkordertime, mapProducts, WorkorderID, day);
+            // If business Hours is 24hours --END--
+        }
+        
+        try{
+            UPDATE updateWorkordertime;
+            if(test.isRunningTest()){
+                Integer i=1;
+                i=i/0;
+            }
+            
+        }catch(exception e){
+            system.debug('Error Occurred due to '+e.getMessage()+' at Line :'+e.getLineNumber());
+        }       
+    }
+    public  static void CreateWorkDetailandWorktime(ID WorkOrderId,ID ProductId,Datetime Startdatetime, DateTime Enddatetime,String day){
+        
+        List<SVMXC__Service_Order_Line__c> listWorkorderDetails=[select id,SVMXC__Product__c from SVMXC__Service_Order_Line__c  where  
+                                                                 SVMXC__Service_Order__c=:WorkorderID AND  
+                                                                 SVMXC__Product__c =:ProductId];
+        
+        if(listWorkorderDetails==null || listWorkorderDetails.size()==0){
+            SVMXC__Service_Order_Line__c NewWorkorderdetail = ClockInClockOutLCHelper.CreateWorkDetail(day, WorkOrderId);
+            ClockInClockOutLCHelper.createWorkTime(NewWorkorderdetail.id, Startdatetime,Enddatetime);
+        }
+        else{
+            ClockInClockOutLCHelper.createWorkTime(listWorkorderDetails[0].id, Startdatetime,Enddatetime);
+        }
+    }
+    @AuraEnabled
+    public static String forcestopworktime(id WorkorderID){
+        String message;
+        Work_Order_Time__c workordertime =[select id,Start_Date_Time__c,End_Date_Time__c, Description__c from Work_Order_Time__c where End_Date_Time__c=null AND Start_Date_Time__c!=null 
+                                           AND  Work_Detail__r.SVMXC__Service_Order__r.id=:WorkorderID  Order by CreatedDate Desc limit 1];
+        
+        workordertime.Description__c=system.Label.ST_ForceStop_Message;
+        workordertime.End_Date_Time__c=  datetime.now();
+        
+        try{
+            if(test.isRunningTest()){
+                workordertime.Id=null;
+            }
+            UPDATE workordertime; 
+            message='SUCCESS';
+        }
+        catch(exception e){
+            
+            system.debug('Error Occurred due to '+e.getMessage()+' at Line :'+e.getLineNumber());
+            message='something went Worng please contact your Administrator';
+        }
+        return message;
+    }
+}

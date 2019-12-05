@@ -1,0 +1,13 @@
+.THIS .btncls:hover {
+    
+    color: #FFFFFF !important;
+    background-color:#333333 !important;
+}
+.THIS .btncls{
+    margin: 15px 0px 10px 10px;
+}
+.THIS .your-clock{
+    zoom: 0.7;
+    -moz-transform: scale(0.7);
+    margin: 30px 10px 0px 440px;
+}

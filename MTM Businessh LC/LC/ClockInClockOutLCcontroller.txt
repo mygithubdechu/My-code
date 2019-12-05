@@ -1,0 +1,102 @@
+({
+    doInit : function(component, event, helper) {
+        component.find('btn2').set('v.disabled',true);
+        var clock = $('.your-clock').FlipClock({
+            autoPlay: false,
+            autoStart: false
+        });
+        
+        var currentID=component.get("v.recordId");
+        var action=component.get("c.setTimmer");
+        action.setParams({
+            'WorkorderID':currentID
+        });
+        action.setCallback(this,function(response){
+            var state= response.getState();
+            if(state==='SUCCESS'){
+                var result = response.getReturnValue();
+                if(result!=null){
+                    component.find('btn1').set('v.disabled',true);
+                    component.find('btn2').set('v.disabled',false);
+                    var startdate= Date.parse(result);
+                    var d = Date.now();
+                    var setTime=(d/1000)-(startdate/1000);
+                    clock.setTime(setTime);
+                    clock.start(function(){
+                        var time  = clock.getTime().time;
+                        const secs = time;
+                        
+                        if(secs>=86400 && component.get('v.secounds')==false){
+                            helper.forceStopworktime(component,event);
+                        }
+                    });
+                    setInterval(function(){
+                        $A.get('e.force:refreshView').fire();
+                    },300*1000);
+                }
+            }
+        });
+        $A.enqueueAction(action);
+    },
+    
+    clockIn : function(component,event,helper) {
+        var clock = $('.your-clock').FlipClock({
+            autoPlay: false,
+            autoStart: false
+        });
+        
+        component.find('btn1').set('v.disabled',true);
+        component.find('btn2').set('v.disabled',false);
+        var CurrentPageId=component.get("v.recordId");
+        var action= component.get("c.getClockIn");        
+        action.setParams({
+            'WorkorderID': CurrentPageId ,
+            'day':null
+        });
+        action.setCallback(this,function(response){
+            var state= response.getState();
+            if(state==='SUCCESS'){
+                clock.start(function(){
+                    var time  = clock.getTime().time;
+                    const secs = time;
+                    if(secs>=86400 && component.get('v.secounds')==flase){
+                        helper.forceStopworktime(component,event);
+                    }
+                });
+                setInterval(function(){
+                    $A.get('e.force:refreshView').fire();
+                },300*1000);
+            }
+        })
+        //$A.get('e.force:refreshView').fire();
+        $A.enqueueAction(action);		
+    },
+    clockout :function(component,event){
+        var clock = $('.your-clock').FlipClock({
+            autoPlay: false,
+            autoStart: false
+        });
+        
+        var currentpageID=component.get("v.recordId");
+        var action= component.get('c.getClockout');
+        action.setParams({
+            'WorkorderID': currentpageID,
+            'day':null,
+            'dtClockOut':null,
+            'dtClockIn':null
+            
+        });
+        action.setCallback(this, function(action) {                
+            $A.get('e.force:refreshView').fire(); 
+        }); 
+        clock.reset();
+        clock.stop();
+        component.find('btn1').set('v.disabled',false);
+        component.find('btn2').set('v.disabled',true);
+        $A.enqueueAction(action);
+    },
+    isRefreshed: function(component, event, helper) {
+        location.reload();
+    },
+    
+})

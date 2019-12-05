@@ -1,0 +1,25 @@
+({
+    forceStopworktime : function(component,event){
+        var clock = $('.your-clock').FlipClock({
+            autoPlay: false,
+            autoStart: false
+        });
+        clock.stop();
+        clock.reset(); 
+        var action= component.get('c.forcestopworktime');
+        var currentid=component.get('v.recordId');
+        action.setParams({
+            'WorkorderID' :currentid
+        });
+        action.setCallback(this,function(response){
+            var state=response.getState();
+            if(state==='SUCCESS'){
+                component.find('btn1').set('v.disabled',false);
+                component.find('btn2').set('v.disabled',true);
+                component.set('v.secounds',true);
+            }
+            $A.get('e.force:refreshView').fire();
+        });
+        $A.enqueueAction(action);
+    }
+})

@@ -1,0 +1,35 @@
+<aura:component implements="flexipage:availableForAllPageTypes,force:hasRecordId" access="global" controller="ClockInClockOutLC">
+    <ltng:require styles="{!join(',',$Resource.flipclockcss)}"
+                  scripts="{!join(',',$Resource.jquerymin, $Resource.flipclockmin,$Resource.momentmin)}"
+                  afterScriptsLoaded="{!c.doInit}"/>
+    
+    <aura:attribute name="recordId" type="Id" />
+    <aura:handler event="force:refreshView" action="{!c.isRefreshed}" />
+    
+    <aura:attribute name='secounds' type='Boolean' default='false'/> 
+    <lightning:accordion  activeSectionName="Clockin/out" allowMultipleSectionsOpen="true">
+
+        <lightning:accordionSection  label="ClockIn/ClockOut" name="Clockin/out">
+            <div class="slds-grid slds-gutters " >
+                <div class="slds-col">
+                    <span></span>
+                </div>
+                <div class="slds-col "  >
+                    <span>
+                        <div class="your-clock" ></div>
+                        <h5 id="out"></h5>
+                        <div class="slds-align_absolute-center">
+                            <lightning:button class="btncls" label="Start" title="Start" aura:id="btn1"  disabled='false' onclick="{! c.clockIn }"/>
+                            <lightning:button class="btncls" label="Stop" title="Stop"  aura:id="btn2" disabled='true' onclick="{! c.clockout }"/>
+                            
+                        </div>
+                    </span>
+                </div>
+                <div class="slds-col">
+                    <span></span>
+                </div>
+            </div>
+        </lightning:accordionSection>
+    </lightning:accordion>
+    
+</aura:component>
