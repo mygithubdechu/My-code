@@ -1,0 +1,113 @@
+({
+    doInit : function(component, event, helper) {
+        var action = component.get('c.getWorkorders');
+        action.setParams({
+            "recordId": component.get('v.recordId')
+        });
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            if ( state === "SUCCESS"){
+                window.setTimeout($A.getCallback(function() {
+                    component.set("v.Workorderlist",response.getReturnValue()); 
+                    if(response.getReturnValue().length==0){
+                        component.set('v.Searchlable','No workorders');
+                        component.set('v.iconname','utility:sentiment_negative');
+                    }
+                }), 2000);
+            }else{
+                helper.showError(component,event,helper);
+            }
+        });
+        $A.enqueueAction(action);
+    },
+    
+    selectAllCheckbox: function(component,event,helper){
+        var checkvalue= component.find("selectAll").get("v.value");
+        var checkOWorkorder= component.find("checkWorkorder");
+        if(checkvalue == true){
+            for(var i=0;i<checkOWorkorder.length;i++){
+                checkOWorkorder[i].set('v.value',true);
+            }
+        }else{
+            for(var i=0;i<checkOWorkorder.length;i++){
+                checkOWorkorder[i].set('v.value',false);
+            }
+        }
+    },
+    handleSelectedWo:function(component,event,helper){
+        var checkbox1 = component.find('checkWorkorder');
+        $A.util.addClass(checkbox1, "slds-hide");
+        
+        var workorderList=component.get("v.Workorderlist");
+        var isSelectAll = component.get("v.selectAll");
+        var selectedWo = [];
+        if(isSelectAll){
+            selectedWo = workorderList;
+        }else{
+            var k = 0;
+            for (var i=0; i<workorderList.length; i++){
+                var c = workorderList[i];
+                if(c.isSelected) {
+                    selectedWo[k] = c;
+                    k++; 
+                }     
+            }
+        }
+        if(selectedWo.length > 0){
+            
+            component.set("v.Spinner", !component.get("v.Spinner"));
+            var div = component.find('msg'); 
+            //Show the success message after 3 seconds...
+            window.setTimeout($A.getCallback(function() {
+                if(component.isValid()) {
+                    $A.util.addClass(div, "slds-transition-show");
+                    component.set("v.Spinner", !component.get("v.Spinner"));
+                }
+            }), 3000);
+            
+            var WoList= JSON.stringify(selectedWo);
+            console.log('WoList :',WoList);
+            var action = component.get("c.processWorkorderList"); 
+            
+            action.setParams({
+                WoList:WoList,
+                "recordId": component.get('v.recordId')
+            });
+            action.setCallback(this,function(result){
+                var state = result.getState();
+                //hide the success message after 2.5 seconds...
+                if (component.isValid() && state === "SUCCESS"){
+                    window.setTimeout($A.getCallback(function() {
+                        if(component.isValid()) {
+                            $A.util.removeClass(div, "slds-transition-show");
+                            $A.util.addClass(div, "slds-transition-hide");
+                            $A.get("e.force:closeQuickAction").fire();
+                        }
+                    }), 2500);
+                }
+                else if(state == "ERROR"){
+                    helper.showError(component,event,helper);
+                }
+            });
+            
+            $A.enqueueAction(action);
+        }
+        else{
+            helper.showInfo(component,event,helper);
+        }
+        
+    },
+    Cancel:function(component,event,helper){
+        $A.get("e.force:closeQuickAction").fire();
+    },
+    sortByWorkorder:function(component, event, helper) {
+        helper.sortBy(component, "Workordername");
+    },
+    sortByAccount:function(component, event, helper) {
+        helper.sortBy(component, "AccountName");
+    },
+    sortByOrderType:function(component, event, helper) {
+        helper.sortBy(component, "OrderType");
+    },
+    
+})

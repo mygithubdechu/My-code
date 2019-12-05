@@ -1,0 +1,73 @@
+public class WorkOrderDuplicatePopulatorController {
+    public WorkOrderDuplicatePopulatorController(){
+        
+    }
+    @AuraEnabled
+    public static List<WorkorderWrapper> getWorkorders(ID recordId ){ 
+        List<WorkorderWrapper> WrapperList= new List<WorkorderWrapper>();
+        svmxc__Service_Order__c workorder= [select id, name,SVMXC__Component__r.id from svmxc__Service_Order__c where ID=:recordId ];
+        if(workorder.SVMXC__Component__r.id!=null ){
+            List<svmxc__Service_Order__c> WorkorderList=[select id, Name,SVMXC__Company__r.Name, SVMXC__Order_Type__c from svmxc__Service_Order__c where svmxc__Order_Type__c != null and Start_Date_Time__c != null and Exclude_for_Time_Field_Calculations__c = false AND svmxc__Service_Order__c.SVMXC__Component__r.Id=:workorder.SVMXC__Component__r.Id];
+            for(svmxc__Service_Order__c Wo:WorkorderList){
+                if(Wo.id!=recordId){
+                    WrapperList.add(new WorkorderWrapper(Wo.id,wo.name,Wo.SVMXC__Company__r.Name,Wo.SVMXC__Order_Type__c,false));     
+                }
+            }
+        }
+        
+        return WrapperList;
+    }
+    
+    @AuraEnabled 
+    public static void processWorkorderList(string  WoList,  ID recordId){
+        system.debug('WoList : '+WoList);
+        List<WorkorderWrapper> wrapperList = new  List<WorkorderWrapper>();
+        Map<String,Copy_Workorder_Fields__c> custmsetngs = Copy_Workorder_Fields__c.getAll();
+        List<String> wfields= new List<String>();
+        for(Copy_Workorder_Fields__c wc :custmsetngs.Values()){
+            wfields.add(wc.Copy_fields__c);
+        }
+        String Query= 'SELECT id, '+String.join(wfields, ',')+' FROM svmxc__Service_Order__c WHERE ID= \'' +recordId+ '\'';
+        svmxc__Service_Order__c serwo =database.query(Query);
+        if(!string.isBlank(WoList)){
+            wrapperList = (List<WorkorderWrapper>)System.JSON.deserialize(WoList,List<WorkorderWrapper>.class);
+            system.debug('wrapperList : '+wrapperList.size());
+            list<svmxc__Service_Order__c> orderList= new list<svmxc__Service_Order__c> ();
+            
+            for(WorkorderWrapper wrap:wrapperList){
+                svmxc__Service_Order__c workordertoupdate= new svmxc__Service_Order__c();
+                workordertoupdate.id=wrap.WorkorderID;
+                for(Copy_Workorder_Fields__c wc :custmsetngs.Values()){
+                    
+                    workordertoupdate.put(wc.Copy_fields__c, serwo.get(wc.Copy_fields__c));
+                    
+                }
+                orderList.add(workordertoupdate);
+            }
+            update orderList;
+        }
+    }
+    
+    public class WorkorderWrapper{
+        @AuraEnabled
+        public String WorkorderID {set;get;}
+        @AuraEnabled
+        public String Workordername {set;get;}
+        @AuraEnabled
+        public String AccountName {set;get;}
+        @AuraEnabled
+        public String OrderType {set;get;}
+        @AuraEnabled
+        public Boolean isSelected {set;get;}
+        
+        public WorkorderWrapper(String WorkorderID,String Workordername,String AccountName,String OrderType,Boolean isSelected){
+            this.WorkorderID=WorkorderID;
+            this.Workordername=Workordername;
+            this.AccountName=AccountName;
+            this.OrderType=OrderType;
+            this.isSelected=isSelected;
+            
+        }
+    }
+    
+}
