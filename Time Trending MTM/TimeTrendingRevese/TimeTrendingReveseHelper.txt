@@ -1,0 +1,154 @@
+({
+    fetchdata:function(component,event,callback){
+        let filter = component.get('v.filter');
+        let filterEnabled = component.get('v.filterEnabled');
+        //alert('selected : '+component.get('v.Selectedtime'));
+        var action=component.get("c.getdata");
+        action.setParams({
+            'recordId':component.get('v.installedProduct'),
+            'filter': filterEnabled?filter:undefined,
+            'selectedTime':component.get('v.Selectedtime')
+        });
+        action.setCallback(this, callback);
+        $A.enqueueAction(action);  
+    },
+    renderchart: function(component, chartData){
+        let series = chartData.series;
+        let labels = [], datasets= [];
+        let colors = component.get('v.colors');
+        
+        series.forEach(function(seriesItem, index){
+            
+            let datawrap = []
+            seriesItem.data.forEach(function(item){
+                let yitem=item.y;
+                datawrap.push({
+                    x: new Date(item.x),
+                    y: yitem.toFixed(2)
+                })
+                
+            })
+            labels.push(seriesItem.name);
+            
+            
+            let totalValue = seriesItem.data.reduce(function(acc, val) {                     
+                return acc + val.y; 
+            }, 0)
+            if(totalValue && totalValue > 0 && seriesItem.data.length > 0) {
+                datasets.push({
+                    data: datawrap,
+                    backgroundColor: colors[index],
+                    hidden: false,
+                    label:'Avg '+seriesItem.name+ ' (Hrs) - '+ (totalValue/seriesItem.data.length).toFixed(2)+' ',
+                    borderColor: colors[index],
+                    fill: false,
+                    pointBackgroundColor: colors[index],
+                    pointBorderColor: colors[index],
+                    pointHoverBackgroundColor: colors[index],
+                    pointHoverBorderColor: "#fff",
+                });   
+            }
+        });
+        
+        var data = {
+            labels: labels,
+            datasets: datasets
+        };
+        var options = {
+            maintainAspectRatio: false,
+            spanGaps: false,
+            bezierCurve : true,
+            tooltips: {
+                callbacks: {
+                    label: function(tooltipItem) {
+                        return tooltipItem.yLabel;
+                    }
+                }
+            },
+            title: {
+                display: true,
+                text: chartData.timeCategory==undefined?'None - IP Templates Type':chartData.timeCategory,
+                position: 'top',
+                fontSize: 14
+            },
+            elements: {
+                line: {
+                    //tension: 0.000001
+                }
+            },
+            scales: {
+                
+                xAxes: [{
+                    type:"time",
+                    time: {
+                        unit: chartData.xAxis.unit
+                    },
+                    ticks: {
+                        min: new Date(chartData.xAxis.min),
+                        max: new Date(chartData.xAxis.max),
+                        stepSize: 0.5
+                    },
+                    scaleLabel: {
+                        display: true,
+                        labelString: 'Actual Start Date/Time'
+                    },
+                }],
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        userCallback: function(label, index, labels) {
+                            // when the floored value is the same as the value we have a whole number
+                            return label.toFixed(2);
+                        }
+                    },
+                    scaleLabel: {
+                        display: true,
+                        labelString: component.get('v.yaxislable')
+                    },
+                }]
+            }
+        };
+        
+        
+        let xaxis = chartData.xAxis;
+        
+        let container = document.getElementById('chart-container');
+        
+        let chartContainer = document.createElement('div');
+        chartContainer.style.height = '300px';
+        
+        let chartEl = document.createElement('canvas');
+        chartEl.setAttribute('height', 100);
+        chartEl.setAttribute('width', 400);
+        chartEl.setAttribute('id', chartData.timeCategory+'-chart') 
+        chartContainer.appendChild(chartEl);   
+        container.appendChild(chartContainer);
+        
+        var chart = new Chart(chartEl.getAttribute('id'), {
+            type: 'line',
+            data: data,
+            options: options,
+            
+        });
+    },
+    removeChilds: function() {
+        const myNode = document.getElementById("chart-container");
+        while (myNode.firstChild) {
+            myNode.removeChild(myNode.firstChild);
+        }
+    },
+    initColors: function(component) {
+        let colors = [];
+        for(var i=0; i<500; i++) {
+            colors.push("#"+((1<<24)*Math.random()|0).toString(16));    
+        }
+        component.set('v.colors', colors)
+    },
+    closeFilter: function() {
+        var appEvent = $A.get("e.c:TimeTrendingCloseFilterModal");
+        appEvent.setParams({
+            
+        })
+        appEvent.fire();
+    },
+})

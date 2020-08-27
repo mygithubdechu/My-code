@@ -1,0 +1,375 @@
+public class TimeTrendingChartReverse {
+    //public static Filter filter{set;get;}
+    public static Work_Order_Time_Fields__c[] fields{set;get{
+        if(fields == null) {
+            Work_Order_Time_Fields__c[] fields = Work_Order_Time_Fields__c.getAll().values();
+            return fields;
+        }else {
+            return fields;   
+        }
+    }}
+    
+    
+    @AuraEnabled
+    public static Filter getFilterInstance() {
+        Filter filter = new Filter();
+        // Get Select option for 
+        filter.categories = getPickListValues('SVMXC__Service_Order__c', 'Category__c');
+        // Get Select option for 
+        filter.ipTemplateTypes = getPickListValues('SVMXC__Service_Order__c', 'IP_Templates_Type__c');
+        
+        return filter;
+    }
+    
+    public static List<TimeTrendingChartReverse.SelectOption2> getPickListValues(String objectName, String fieldName) {
+        
+        List<TimeTrendingChartReverse.SelectOption2> options = new List<TimeTrendingChartReverse.SelectOption2>();
+        
+        Map<String,Schema.SObjectType> gd = Schema.getGlobalDescribe(); 
+        Map<String, Schema.SObjectField> field_map = gd.get(objectName.toLowerCase()).getDescribe().fields.getMap(); 
+        
+        List<Schema.PicklistEntry> picklistValues = field_map.get(fieldName).getDescribe().getPickListValues();
+        
+        for (Schema.PicklistEntry pv : picklistValues) {
+            options.add(new TimeTrendingChartReverse.SelectOption2(pv.getValue(), pv.getLabel()));
+        }
+        return options;
+    }
+    
+    
+    @AuraEnabled 
+    public static List<chart> getdata(String recordId ,Filter filter,String selectedTime){
+        system.debug('SelectedTime 2 :'+SelectedTime);
+        List<Chart> wrappers = new List<Chart>();
+        recordId = recordId == null?'':recordId;
+        
+        List<Time_Hours_Trending__c> trendings=getallTimetrendings(recordId,filter,selectedTime);
+        Map<String,Map<String,List<dataset>>> datamap=createDatamap(trendings,recordId,selectedTime);
+        
+        DateTime min, max;
+        if(min == null) min = System.today();
+        if(max == null) max = System.today();
+        Set<Id> ipIds = new Set<Id>();
+        for(Time_Hours_Trending__c trend: trendings){
+            
+            if(trend.Actual_Start_Date_Time__c != null && min != null && max != null) {
+                
+                if(trend.Actual_Start_Date_Time__c < min) {
+                    min = trend.Actual_Start_Date_Time__c;
+                }
+                if(trend.Actual_Start_Date_Time__c > max) {
+                    max = trend.Actual_Start_Date_Time__c;
+                }
+            }
+        }
+        
+        for(string a: datamap.keyset()){
+            chart chart= new chart();
+            chart.xAxis = new XAxis(min, max, 'month');
+            chart.timeCategory=a;
+            List<SeriesItem> serieslist= new List<SeriesItem>();
+            for(String b:datamap.get(a).keyset()){
+                if(b!=null){
+                    SeriesItem ser= new SeriesItem(b,datamap.get(a).get(b));
+                    serieslist.add(ser);
+                }
+            }
+            chart.series=serieslist;
+            wrappers.add(chart);
+        }
+        return wrappers;
+    }
+    
+    @AuraEnabled
+    public static List<Time_Hours_Trending__c> getallTimetrendings(String recordId,Filter filter,String SelectedTime){
+        List<Time_Hours_Trending__c> timetrendings = new List<Time_Hours_Trending__c>();
+        string queryfield='select id, Actual_Start_Date_Time__c,Actual_Service_Hours__c, Ip_Templates_Type__c';
+         system.debug('SelectedTime 1 :'+SelectedTime);
+        if(SelectedTime!='Actual_Service_Hours__c'){
+            for(Work_Order_Time_Fields__c field :fields){
+               
+                queryfield+=', '+String.valueOf(field.get(SelectedTime));
+            }
+        }
+        
+        queryfield+=' from Time_Hours_Trending__c where  Actual_Start_Date_Time__c!=null ';
+        if(recordId != null && recordId != '') {
+            queryfield += ' and installed_Product__c = :recordId ';
+        }
+        
+        if(filter != null ) {
+            
+            String selectedCategory = filter.selectedCategory;
+            String selectedTemplateType = filter.selectedipTemplateType;
+            
+            String selectedOrderType = filter.selectedOrderType;
+            String selectedOrderSubType = filter.selectedOrderSubType;
+            
+            String timeDuration = filter.timeDuration;
+            
+            Date startDate = filter.startDate;
+            Date endDate = filter.endDate;
+            
+            if(timeDuration == 'custom') {
+                queryfield += ' and Actual_Start_Date_Time__c >= :startDate and Actual_Start_Date_Time__c <= :endDate';
+            }else {
+                if(timeDuration == 'THIS_YEAR')
+                    queryfield += ' and Actual_Start_Date_Time__c = THIS_YEAR';
+                if(timeDuration == 'LAST_YEAR')
+                    queryfield += ' and Actual_Start_Date_Time__c = LAST_YEAR';
+                
+                if(timeDuration == 'LAST_FISCAL_YEAR')
+                    queryfield += ' and Actual_Start_Date_Time__c = LAST_FISCAL_YEAR';
+                if(timeDuration == 'THIS_FISCAL_YEAR')
+                    queryfield += ' and Actual_Start_Date_Time__c = THIS_FISCAL_YEAR';
+                
+                if(timeDuration == 'LAST_QUARTER')
+                    queryfield += ' and Actual_Start_Date_Time__c = LAST_QUARTER';
+                if(timeDuration == 'THIS_QUARTER')
+                    queryfield += ' and Actual_Start_Date_Time__c = THIS_QUARTER';
+                
+                if(timeDuration == 'LAST_MONTH')
+                    queryfield += ' and Actual_Start_Date_Time__c = LAST_MONTH';
+                if(timeDuration == 'THIS_MONTH')
+                    queryfield += ' and Actual_Start_Date_Time__c = THIS_MONTH';
+                
+                if(timeDuration == 'LAST_WEEK')
+                    queryfield += ' and Actual_Start_Date_Time__c = LAST_WEEK';
+                if(timeDuration == 'THIS_WEEK')
+                    queryfield += ' and Actual_Start_Date_Time__c = THIS_WEEK';
+                if(timeDuration == 'YTD') {
+                    
+                    Date ytd = Date.newInstance(System.today().year(), 1, 1);
+                    
+                    queryfield += ' and Actual_Start_Date_Time__c >= :ytd and Actual_Start_Date_Time__c <= TODAY';
+                } 
+            }
+            
+            if(filter.selectedFilterType == 'TemplateType' ) {
+                
+                if(filter.hasCategoryFilter) {
+                    queryfield += ' and Template_Category__c = :selectedCategory';
+                }
+                
+                if(filter.hasTemplateTypeFilter) {
+                    queryfield += ' and IP_Templates_Type__c = :selectedTemplateType';
+                }
+            }
+            if(filter.selectedFilterType == 'OrderType') {
+                
+                if(filter.hasOrderTypeFilter) {
+                    queryfield += ' and Order_Type__c = :selectedOrderType';
+                }
+                
+                if(filter.hasOrderSubTypeFilter) {
+                    queryfield += ' and Order_Type_Sub_Category__c = :selectedOrderSubType';
+                }
+            }
+        }
+        queryfield += ' order by actual_Start_Date_Time__c ASC';
+        timetrendings= DataBase.query(queryfield);
+        return timetrendings;
+    }
+    
+    @AuraEnabled
+    public static  Map<String,Map<String,List<dataset>>> createDatamap(List<Time_Hours_Trending__c> trendinglist,String recordId,String SelectedTime){
+        
+        Map<String,Map<String,List<dataset>>> finaldataset= new Map<String,Map<String,List<dataset>>>();
+        Map<String,List<Time_Hours_Trending__c>> TrendMap =CreateTrendMap(trendinglist);
+        List<String> timefields= new List<String>();
+        if(recordId != null && recordId != '') {
+            SVMXC__Installed_Product__c installedproduct=[select id, Time_hrs__c from svmxc__Installed_Product__c where id = :recordId];
+            if(installedproduct.Time_Hrs__c !=null){
+                timefields.addAll(installedproduct.Time_Hrs__c.Split(';'));
+            }
+            
+            
+        }
+
+        String varies='Time_Difference_Field_API_Name__c';
+        for(String category: TrendMap.keyset()){
+            
+            Map<String,List<dataset>> checkexistingmap = new Map<String,List<dataset>>();
+            for(Time_Hours_Trending__c trend :TrendMap.get(category)){
+                if(SelectedTime!='Actual_Service_Hours__c'){
+                    Decimal  fieldValue;
+                    for(Work_Order_Time_Fields__c field :fields){
+                        if(timefields.contains(field.name)){
+                            
+                            fieldValue = (Decimal)trend.get(String.valueOf(field.get(SelectedTime)));      
+                            if(fieldValue != null && fieldValue!=0) {
+                                
+                                if(checkexistingmap.containskey(field.name)){
+                                    checkexistingmap.get(field.name).add(new Dataset(trend.Actual_Start_Date_Time__c, fieldValue.setScale(2)));
+                                    
+                                }else{
+                                    checkexistingmap.put(field.name,new List<dataset>{new Dataset(trend.Actual_Start_Date_Time__c, fieldValue.setScale(2))});    
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    if(trend.Actual_Service_Hours__c!=null && trend.Actual_Service_Hours__c!=0){
+                        if(checkexistingmap.containskey('Actual Service Hours')){
+                            checkexistingmap.get('Actual Service Hours').add(new Dataset(trend.Actual_Start_Date_Time__c, (Decimal)trend.Actual_Service_Hours__c ));
+                            
+                        }else{
+                            checkexistingmap.put('Actual Service Hours',new List<dataset>{new Dataset(trend.Actual_Start_Date_Time__c, (Decimal)trend.Actual_Service_Hours__c )});    
+                        }
+                    }
+                    
+                }
+                if(!checkexistingmap.isEmpty()){
+                    //bug('checkexistingmap : '+checkexistingmap);
+                    finaldataset.put(trend.Ip_Templates_Type__c,checkexistingmap);  
+                }
+            }       
+        }
+        
+        return finaldataset;
+    }
+    
+    @AuraEnabled
+    public static Map<String,List<Time_Hours_Trending__c>>  CreateTrendMap(List<Time_Hours_Trending__c> trendinglist){
+        Map<String,List<Time_Hours_Trending__c>> trendingCategorymap= new Map<String,List<Time_Hours_Trending__c>>();
+        for(Time_Hours_Trending__c trend :trendinglist){
+            
+            if(trendingCategorymap.containskey(trend.Ip_Templates_Type__c)){
+                trendingCategorymap.get(trend.Ip_Templates_Type__c).add(trend);
+                
+            }else{
+                trendingCategorymap.put(trend.Ip_Templates_Type__c,new List<Time_Hours_Trending__c> {trend});
+            }
+        }
+        return trendingCategorymap;
+    }
+    /*
+public static String[] picklist_values(String object_name, String field_name) {
+String[] values = new String[]{};
+String[] types = new String[]{object_name};
+Schema.DescribeSobjectResult[] results = Schema.describeSObjects(types);
+for(Schema.DescribeSobjectResult res : results) {
+for (Schema.PicklistEntry entry : res.fields.getMap().get(field_name).getDescribe().getPicklistValues()) {
+if (entry.isActive()) {values.add(entry.getValue());}
+}
+}
+return values;
+}*/ 
+    
+    public class chart{
+        @AuraEnabled
+        public XAxis xAxis{set;get;}
+        @AuraEnabled
+        public String timeCategory{set;get;}
+        @AuraEnabled
+        public List<SeriesItem> series{set;get;}
+    }
+    
+    public class XAxis{
+        @AuraEnabled
+        public DateTime min{set;get;}
+        @AuraEnabled
+        public DateTime max{set;get;}
+        @AuraEnabled
+        public String unit{set;get;}
+        
+        public XAxis(DateTime min, DateTime max, String unit) {
+            this.min = min; this.max = max; this.unit = unit;
+        }
+    }
+    public class Dataset{
+        @AuraEnabled
+        public  DateTime x{set;get;}
+        @AuraEnabled
+        public  Decimal y{set;get;}
+        public Dataset(DateTime x,Decimal y){            
+            this.x=x;
+            this.y=y;
+        }
+    }
+    
+    public class SeriesItem {
+        @AuraEnabled
+        public String name{set;get;}
+        @AuraEnabled
+        public List<Dataset> data{set;get;}
+        public SeriesItem(String name, List<Dataset> data) {
+            this.name = name;
+            this.data = data;
+        }
+    }
+    
+    public class Filter {
+        
+        // Date Filters
+        @AuraEnabled
+        public String timeDuration{set;get;}
+        @AuraEnabled
+        public Date startDate{set;get;}
+        @AuraEnabled
+        public Date endDate{set;get;}
+        
+        @AuraEnabled
+        public String selectedFilterType{set;get{
+            return selectedFilterType==null?'TemplateType':selectedFilterType;
+        }}
+        
+        // Category
+        @AuraEnabled
+        public List<SelectOption2> categories{set;get;}
+        @AuraEnabled
+        public List<SelectOption2> ipTemplateTypes{set;get;}
+        @AuraEnabled
+        public String selectedCategory{set;get;}
+        @AuraEnabled
+        public String selectedIpTemplateType{set;get;}
+        @AuraEnabled
+        public Map<String, List<SelectOption2>> categorySelectMap{set;get{
+            return TimeTrendDependantPicklistIP.getDependentMap('SVMXC__Service_Order__c', 'Category__c', 'IP_Templates_Type__c');
+        }}
+        
+        // Order Types
+        @AuraEnabled
+        public List<SelectOption2> orderTypes{set;get;}
+        @AuraEnabled
+        public List<SelectOption2> orderSubTypes{set;get;}
+        @AuraEnabled
+        public String selectedOrderType{set;get;}
+        @AuraEnabled
+        public String selectedOrderSubType{set;get;}  
+        @AuraEnabled
+        public Map<String, List<SelectOption2>> orderTypeSelectMap{set;get{
+            return TimeTrendDependantPicklistIP.getDependentMap('SVMXC__Service_Order__c', 'SVMXC__Order_Type__c', 'Order_Type_Sub_Category__c');
+        }}
+        
+        @AuraEnabled
+        public Boolean hasCategoryFilter{set;get{
+            return (selectedCategory != null && selectedCategory != '');
+        }}
+        
+        @AuraEnabled
+        public Boolean hasTemplateTypeFilter{set;get{
+            return (selectedIpTemplateType != null && selectedIpTemplateType != '');
+        }}
+        
+        @AuraEnabled
+        public Boolean hasOrderTypeFilter{set;get{
+            return (selectedOrderType != null && selectedOrderType != '');
+        }}
+        
+        @AuraEnabled
+        public Boolean hasOrderSubTypeFilter{set;get{
+            return (selectedOrderSubType != null && selectedOrderSubType != '');
+        }}
+    }
+    public class SelectOption2{
+        @AuraEnabled
+        public String value;
+        @AuraEnabled
+        public String label;
+        public SelectOption2(String value, String label) {
+            this.value = value;
+            this.label = label;
+        }
+    }
+}

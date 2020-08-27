@@ -1,0 +1,94 @@
+({
+	doInit : function(component, event, helper) {
+        
+        let callback = function(response) {
+            
+            let state = response.getState();
+            let filter = response.getReturnValue();
+            
+            if(state === 'SUCCESS') {
+                let result = response.getReturnValue();
+                
+                component.set('v.filter2', response.getReturnValue())
+               // helper.initSelect2Options(component, event, response.getReturnValue())
+                
+                Object.keys(result.categorySelectMap).forEach(function(key){
+                    let currentList = result.categorySelectMap[key];                    
+                })
+                
+                component.set('v.categoryOptionMap', result.categorySelectMap);                
+                let categories = [];
+                
+                Object.keys(result.categorySelectMap).forEach(function(category){
+                    categories.push({
+                        value: category,
+                        label: category
+                    })
+                });
+                
+                component.set('v.categories', categories);
+                
+                // For Order tyeps
+                Object.keys(result.orderTypeSelectMap).forEach(function(key){
+                    let currentList = result.orderTypeSelectMap[key];                    
+                })
+                component.set('v.orderTypeOptionMap', result.orderTypeSelectMap);                
+                
+                let orderTypes = [];
+                Object.keys(result.orderTypeSelectMap).forEach(function(category){
+                    orderTypes.push({
+                        value: category,
+                        label: category
+                    })
+                });
+                component.set('v.orderTypes', orderTypes);
+            }else{
+                console.error("Error: "+JSON.stringify(response.getError()));
+            }
+        }
+		helper.initSelectOptions(component, callback);
+	},
+    handleFilterClick: function(component, event, helper) {
+        let filter = component.get('v.filter2');
+        var appEvent = $A.get("e.c:TimeTrendingFilterData");
+        appEvent.setParams({
+            'filter': {
+                'timeDuration': filter.timeDuration,
+                'startDate': filter.timeDuration=='custom'?filter.startDate:undefined,
+                'endDate':  filter.timeDuration=='custom'?filter.endDate:undefined,
+                'selectedCategory': filter.selectedCategory,
+                'selectedIpTemplateType': filter.selectedIpTemplateType,
+                'selectedOrderType': filter.selectedOrderType,
+                'selectedOrderSubType': filter.selectedOrderSubType,
+                'selectedFilterType': filter.selectedFilterType
+            }
+        });
+        appEvent.fire();
+    },
+    handleCancelClick: function(component, event, helper) {
+        var appEvent = $A.get("e.c:TimeTrendingCloseFilterModal");
+        appEvent.setParams({
+            'filter': component.get('v.filter2')
+        });
+        appEvent.fire();
+    },
+    handleCategoryChange: function(component, event, helper) {
+        let selectedCat = component.get('v.filter2.selectedCategory');
+        let categoryMap = component.get('v.categoryOptionMap');
+        component.set('v.ipTemplateTypes', categoryMap[selectedCat]);
+        component.set('v.ipSelectDisabled', false);
+    },
+     handleOrderTypeChange: function(component, event, helper) {
+        let selectedOrderType = component.get('v.filter2.selectedOrderType');
+        let categoryMap = component.get('v.orderTypeOptionMap');
+        component.set('v.subOrderTypes', categoryMap[selectedOrderType])
+        component.set('v.orderSubTypeDisabled', false)
+    },
+    handleTimeDurationChanged: function(component,event, helper) {
+        let selectedValue = component.get('v.filter2.timeDuration')
+        if(selectedValue !== 'custom') {
+            component.set('v.filter2.startDate', '')
+            component.set('v.filter2.endDate', '')
+        }    
+    }
+})

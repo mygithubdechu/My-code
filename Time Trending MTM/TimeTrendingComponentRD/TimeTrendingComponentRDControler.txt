@@ -1,0 +1,78 @@
+({
+    doInit : function(component, event, helper) {
+        
+        var appEvent = $A.get("e.c:TimeTrendingRefreshData");
+        appEvent.setParams({
+            'filter': 'details'
+        })
+        //appEvent.fire();
+        component.set('v.scriptLoaded', true);
+        component.set('v.Timevalues',["Real Time","Difference Time","Job Time"]);
+    },
+    handleFilterModalOpen: function(component, event, helper) {
+       
+        helper.showFilterPanel();
+    },
+    handleFilterModalClose: function(component, event, helper) {
+
+        helper.hideFilterPanel();
+    },
+    handlePanelToggleEvent: function(component, event, helper) {
+
+        let panel = event.getParam('panel');
+        
+        if(panel && panel === 'filter') {
+            helper.showFilterPanel();
+        }
+        
+        if(panel && panel === 'chart') {
+            helper.toggleChartPanel(component);
+        }
+        
+        if(panel && panel === 'details') {
+            helper.toggleDetailsPanel(component);
+        }
+    },
+    handleRefreshClick: function(component, event, helper) {
+        var selectedItemValue;
+        var yaxislable;
+        if(component.find("selectedTime").get("v.value")=='Machine Hrs'){
+            selectedItemValue='Time_Field_Api_Name__c';
+            yaxislable='Machine Hrs';
+
+        }else if(component.find("selectedTime").get("v.value")=='Machine Hrs Interval'){
+            selectedItemValue='Time_Difference_Field_API_Name__c';
+            yaxislable='Machine Hrs Interval';
+
+        }else if(component.find("selectedTime").get("v.value")=='Work Duration'){
+            selectedItemValue='Actual_Service_Hours__c';
+            yaxislable='Work Duration';
+
+        }
+        
+		component.set('v.yaxislable',yaxislable);
+        component.set('v.attselectedTime',selectedItemValue);
+        var appEvent = $A.get("e.c:TimeTrendingRefreshData");
+        appEvent.setParams({
+            'filter': 'details'
+        })
+        appEvent.fire();
+    },
+    toggleFilterPanel : function(component, event, helper) {
+
+        helper.toggleFilterPanel();
+    },
+    clearFilter:function(component){
+        var appEvent = $A.get("e.c:TimeTrendingFilterData");
+        appEvent.setParams({
+            'filter': {}
+        })
+        appEvent.fire();
+        var clearfilter=$A.get("e.c:TimeTrendingClearData");
+        clearfilter.setParams({
+            'filter':{}
+        })
+        clearfilter.fire();
+        
+    },
+})

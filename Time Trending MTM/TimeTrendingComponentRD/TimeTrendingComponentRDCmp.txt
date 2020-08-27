@@ -1,0 +1,108 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,forceCommunity:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global" >
+    
+    <ltng:require 
+                  scripts="{!join(',', $Resource.jquery, $Resource.chartJS2)}"
+                  styles="{!join(',', $Resource.chartJSStyle)}"
+                  afterScriptsLoaded="{!c.doInit}"
+                  />
+    
+    <aura:attribute name="recordId" type="String"/>
+    
+    <aura:attribute name="scriptLoaded" type="Boolean"/>
+    <aura:attribute name="title" type="String"/>
+    
+    <aura:attribute name="filterVisible" type="Boolean" default="true"/>
+    <aura:attribute name="chartVisible" type="Boolean" default="true"/>
+    <aura:attribute name="detailsVisible" type="Boolean" default="false"/>
+    <aura:attribute name="attselectedTime" type='String' default="Time_Field_Api_Name__c" />
+    <aura:attribute name="yaxislable" type='String' default="Machine Hrs"/>
+       
+    <aura:attribute name="filter" type="TimeTrendingChartController.Filter" default="{}" />
+    <aura:attribute name='Timevalues' type='list'/>
+    
+    <!-- Handlers -->
+    <aura:handler event="c:TimeTrendingCloseFilterModal" action="{!c.handleFilterModalClose}"/>
+    <aura:handler event="c:TimeTrendingOpenFilterModal" action="{!c.handleFilterModalOpen}"/>
+    
+    
+    <!-- Register Event -->
+    <aura:registerEvent name="TimeTrendingOpenFilterModal" type="c:TimeTrendingOpenFilterModal"/>
+    <aura:registerEvent name="TimeTrendingCloseFilterModal" type="c:TimeTrendingCloseFilterModal"/>
+    <aura:registerEvent name="TimeTrendingRefreshData" type="c:TimeTrendingRefreshData"/>
+    <aura:registerEvent name="TimeTrendingClearData" type="c:TimeTrendingClearData"/>
+    
+    <!--c:TimeTrendingPageHeader></c:TimeTrendingPageHeader-->
+    <!--Header Start-->
+    <aura:if isTrue="{!v.chartVisible}">
+        <div class="slds-page-header " style='margin-left:20px; margin-right:20px; margin-top:1em; ' >
+            
+            <div class="slds-page-header__row" >
+                <div class="slds-page-header__col-meta ">
+                    <b><p class="slds-page-header__meta-text ">Trending Chart</p></b>
+                </div>
+                <div class="slds-page-header__col-controls">
+                    <div class="slds-page-header__controls">
+                        <div class="slds-page-header__control">
+                            <div class="slds-dropdown-trigger slds-dropdown-trigger_click" style="padding-right:1em; margin-top:0.25em;">
+                                
+                                <ui:inputSelect class="single" change="{!c.handleRefreshClick}" aura:id="selectedTime" >
+									<!--aura:iteration items="{!v.Timevalues}" var="Timevalue">                                    
+                                    <ui:inputSelectOption text='{!Timevalue}' value="{!Timevalue}"/>
+                                    </aura:iteration-->
+                                    <ui:inputSelectOption text='Machine Hrs' value="Time_Field_Api_Name__c"/>
+                                    <ui:inputSelectOption text='Machine Hrs Interval' value="Time_Difference_Field_API_Name__c"/>
+                                    <ui:inputSelectOption text='Work Duration' value="Actual_Service_Hours__c"/>
+                                    
+                                </ui:inputSelect>
+                                
+                                <!--lightning:select name="select1" onchange="{!c.handleRefreshClick}" aura:id="selectedTime">
+                                    <option value="Time_Field_Api_Name__c">Real Time</option>
+                                    <option value="Time_Difference_Field_API_Name__c">Difference Time</option>
+                                    <option  value="Actual_Service_Hours__c">Job Time</option>
+                                </lightning:select-->
+                            </div>
+                        </div>
+                        <div class="slds-page-header__control" style="padding-right:0.5em;">
+                            
+                            <button id='refreshbtn' style=" border-radius: 20px !important;" onclick="{!c.handleRefreshClick}" class=" pointer slds-button slds-button_icon slds-button_icon-border-filled" title="Refresh List">
+                                <lightning:icon iconName="utility:refresh" size="x-small"/>
+                                <span class="slds-assistive-text">Refresh List</span>
+                            </button>
+                            
+                        </div>
+                        <div class="slds-page-header__control" style="padding-right:0.5em;">
+                            <button style=" border-radius: 20px !important;" id='filtericon' onclick="{!c.toggleFilterPanel}" class="pointer slds-button slds-button_icon slds-button_icon-border-filled" title="Filters">
+                                <lightning:icon iconName="utility:filterList" size="x-small" />
+                                <span class="slds-assistive-text">Filters</span>
+                            </button>
+                        </div>
+                        <div class="slds-page-header__control" style="padding-right:0.5em;">
+                            <button  style=" border-radius: 20px !important;" onclick="{!c.clearFilter}" id='clearfilter' class="hide pointer slds-button slds-button_icon slds-button_icon-border-filled" title="Clear Filters">
+                                <lightning:icon iconName="utility:close" size="x-small" />
+                                <span class="slds-assistive-text">Clear Filters</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--Header End-->
+        <div style="margin-top: 1rem;">
+            <div class="slds-grid slds-gutters"> 
+                <div class="slds-col">
+                    <span>
+                        <lightning:card >
+                            <aura:if isTrue="{!v.scriptLoaded}">
+                                <c:TimeTrendingRevese installedProduct="{!v.recordId}" filter="{!v.filter}" Selectedtime="{!v.attselectedTime}" yaxislable='{!v.yaxislable}'></c:TimeTrendingRevese>
+                            </aura:if>
+                        </lightning:card>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </aura:if>
+    <section id="filter-panel" role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal">
+        <c:TimeTrendingFilter filter="{!v.filter}"></c:TimeTrendingFilter>
+    </section>
+    <div class="slds-backdrop"></div>
+</aura:component>

@@ -1,0 +1,25 @@
+.THIS .filtered svg{
+    fill:#1b5297;
+}
+.THIS .filtered {
+    background-color: #eeeeee;
+}
+.THIS .pointer {
+    border-radius: 50%;
+    -webkit-transition: -webkit-transform .8s ease-in-out;
+    transition:         transform .8s ease-in-out;
+}
+.THIS .pointer:hover  {
+    background-color: #eeeeee;
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+}
+.THIS .hide {
+    display:none;  
+}
+.THIS #clearfilter svg{
+    fill:red;
+}
+.THIS #refreshbtn:hover svg{
+    fill:#1b5297;
+}

@@ -1,0 +1,35 @@
+<aura:component controller='TimeTrendingChartReverse' implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global" >
+    <ltng:require 
+                  scripts="{!join(',', $Resource.jquery, $Resource.chartJS2)}"
+                  styles="{!join(',', $Resource.chartJSStyle)}"
+                  afterScriptsLoaded="{!c.doInit}"
+                  />
+    <aura:handler event="c:TimeTrendingRefreshData" action="{!c.refreshData}"/>
+    <aura:attribute type='String' name='recordId'/>
+    <aura:attribute name="charts" type="List"/>
+    <aura:attribute name="colors" type="List"/>
+    <aura:attribute name="isLoading" type="Boolean"/>
+    <aura:attribute name="installedProduct" type="String"/>
+    <aura:attribute name="filter" type="Object"/>
+    <aura:attribute name="Selectedtime" type="String"/>
+    <aura:attribute name="yaxislable" type='String' />
+    <aura:handler event="c:TimeTrendingFilterData" action="{!c.refreshData}"/>
+    
+    
+    <aura:attribute name="isInitiated" type="Boolean"/>
+    
+    <aura:attribute name="filterEnabled" type="Boolean"/>
+    
+    <div style="padding: 1rem; width: 100%;">
+        <aura:if isTrue="{!v.isLoading}">
+        	<lightning:spinner alternativeText="Loading" size="medium" />
+        </aura:if>
+        <div id="chart-container" style="padding: 1rem 0rem; width: 97%; "></div>
+    </div>
+    <!--div id="chart-container" style="padding: 1rem 0rem; width: 97%;"/-->
+    <!--canvas id="line-chart" style="padding: 1rem 0rem; width: 97%;"></canvas-->
+    
+    
+    
+    
+</aura:component>

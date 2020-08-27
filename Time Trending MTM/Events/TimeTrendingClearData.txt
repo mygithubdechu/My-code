@@ -1,0 +1,3 @@
+<aura:event type="APPLICATION" description="Event get fired when user want to clearfilter data up on clicking the clear filter Button">
+    <aura:attribute name="filter" type="object"/>
+</aura:event>

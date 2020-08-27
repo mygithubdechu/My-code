@@ -1,0 +1,15 @@
+({
+	initSelectOptions : function(component, callback) {
+        
+        let action = component.get('c.getFilterInstance');
+        action.setCallback(this, callback);
+        $A.enqueueAction(action);
+        
+	},
+    initSelect2Options: function(component, event, filter) {
+        
+        //console.log('Time Durations: '+JSON.stringify(filter))
+        
+        //let filter = component.get('v.filter2')
+    }
+})

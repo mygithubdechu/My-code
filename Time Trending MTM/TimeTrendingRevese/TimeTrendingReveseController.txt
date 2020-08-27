@@ -1,0 +1,219 @@
+({
+    doInit : function(component, event, helper) {
+       
+        helper.initColors(component);
+        component.set('v.isLoading', true);
+        /*var action=component.get("c.getdata");
+        action.setParams({
+            'recordId':component.get('v.recordId')
+        });*/
+        let callback=function(response){
+            let state= response.getState();
+            
+            if(state === 'SUCCESS') {
+                helper.removeChilds()
+                let charts= response.getReturnValue();
+                
+                if(charts.length>0){
+                    charts.forEach(function(chart){
+                        helper.renderchart(component, chart);
+                    });
+                }
+                else{
+                    $('#filtericon').addClass('hide');
+                    document.getElementById('chart-container').innerHTML="<b style='font-size: 1.3em; '>No Records Found</b>";
+                    document.getElementById('chart-container').style.textAlign = "center";
+                    
+                }
+            }
+            else{
+                console.error('Error : ',JSON.stringify(response.getError()));
+            }
+            component.set('v.isLoading', false);
+            component.set('v.isInitiated', true);
+        }
+        helper.fetchdata(component,event,callback);
+        //$A.enqueueAction(action);        
+        /*  let container = document.getElementById('line-chart');
+        
+        let chartContainer = document.createElement('div');
+        chartContainer.style.height = '300px';
+        
+        let chartEl = document.createElement('canvas');
+        chartEl.setAttribute('height', 90);
+        chartEl.setAttribute('width', 400)
+        chartEl.setAttribute('id', 'chartData.timeCategory'+'-chart')
+        
+        chartContainer.appendChild(chartEl);   
+        
+        container.appendChild(chartContainer);
+        
+        let chart = new Chart(chartEl.getAttribute('id'), {
+            type: 'line',
+            data: {
+                // labels: [new Date("201-2-12 13:3").toLocaleString(),new Date("2015-3-15 13:3").toLocaleString(), new Date("2015-3-25 13:2").toLocaleString(), new Date("2015-4-25 14:12").toLocaleString()],
+                datasets: [
+                    { 
+                        label: "Total Time",
+                        data: [
+                            {
+                                t: new Date("2017-2-12 13:3"),
+                                y: 1230
+                            },
+                            {
+                                t: new Date("2018-3-15 13:3"),
+                                y: 12356
+                            },
+                            {
+                                t: new Date("2019-3-25 13:2"),
+                                y: 0
+                            },
+                            {
+                                t: new Date("2020-4-25 14:12"),
+                                y: 3296
+                            }
+                        ],
+                        borderColor: "#3e95cd",
+                        fill: false,
+                        pointBackgroundColor: "#fff",
+                        pointBorderColor: "#ffb88c",
+                        pointHoverBackgroundColor: "#ffb88c",
+                        pointHoverBorderColor: "#fff"
+                    }, 
+                    { 
+                        label: "Control On Time",
+                        data: [
+                            {
+                                t: new Date("2015-3-15 13:3"),
+                                y: 123
+                            },
+                            {
+                                t: new Date("2016-3-25 13:2"),
+                                y: 11112
+                            },
+                            {
+                                t: new Date("2019-4-25 14:12"),
+                                y: 325
+                            }
+                        ],
+                        borderColor: "#FFC0CB",
+                        fill: false,
+                        pointBackgroundColor: "#fff",
+                        pointBorderColor: "#ffb88c",
+                        pointHoverBackgroundColor: "#ffb88c",
+                        pointHoverBorderColor: "#fff"
+                    },
+                    { 
+                        label: "Cutting Time",
+                        data: [
+                            {
+                                t: new Date("2016-3-15 13:3"),
+                                y: 1203
+                            },
+                            {
+                                t: new Date("2018-3-25 13:2"),
+                                y: 1112
+                            },
+                            {
+                                t: new Date("2020-4-25 14:12"),
+                                y: 32500
+                            }
+                        ],
+                        borderColor: "#32CD32",
+                        fill: false,
+                        pointBackgroundColor: "#fff",
+                        pointBorderColor: "#ffb88c",
+                        pointHoverBackgroundColor: "#ffb88c",
+                        pointHoverBorderColor: "#fff"
+                    }
+                ]
+            },
+            options: {
+                "maintainAspectRatio":false,
+                "spanGaps":false,
+                "bezierCurve":true,
+                "title":{
+                    "display":true,
+                    "text":"Balbar - VT4",
+                    "position":"top",
+                    "fontSize":14
+                },
+                "elements":{
+                    "line":{}
+                },
+                "scales":{
+                    "xAxes":[
+                        {
+                            "type":"time",
+                            "time":{
+                                "unit":"month"
+                            },
+                            "ticks":{
+                                "min":"2014-04-07T14:00:00.000Z",
+                                "max":"2020-07-24T00:00:00.000Z"
+                            }
+                        }
+                    ],
+                    "yAxes":[{
+                        "scaleLabel":{
+                            "display":true,
+                            "labelString":"Duration"
+                        }
+                    }]
+                }
+            }
+        });*/
+        
+    },
+    refreshData : function(component, event, helper) {
+         
+        if(event.getParam('filter')) {
+            
+            component.set('v.filter', event.getParam('filter'))
+            component.set('v.filterEnabled', true)
+            if(component.get('v.filter').selectedCategory!='' && component.get('v.filter').selectedCategory!=undefined ){
+                $('#filtericon').addClass('filtered');
+                
+                $('#clearfilter').removeClass('hide');
+            }else if(component.get('v.filter').selectTemplateType!='' && component.get('v.filter').selectTemplateType!=undefined ){
+                $('#filtericon').addClass('filtered');
+                $('#clearfilter').removeClass('hide');
+            }else if(component.get('v.filter').selectedOrderType!='' && component.get('v.filter').selectedOrderType!=undefined ){
+                $('#filtericon').addClass('filtered');
+                $('#clearfilter').removeClass('hide');
+            }else{
+                component.set('v.filter', {})
+                $('#filtericon').removeClass('filtered');
+                $('#clearfilter').addClass('hide');
+                
+            }
+        }
+        component.set('v.isLoading', true);
+        let callback = function(response) {
+            // Get state of response
+            let state = response.getState();
+            if(state === 'SUCCESS') {
+                helper.removeChilds()
+                let charts = response.getReturnValue();
+                component.set('v.charts', charts)
+                if(charts.length>0){
+                    charts.forEach(function(chart){
+                        helper.renderchart(component, chart);
+                    });
+                }
+                else{
+                    
+                    document.getElementById('chart-container').innerHTML="<b style='font-size: 1.3em; '>No Records Found</b>";
+                    document.getElementById('chart-container').style.textAlign = "center";
+                    
+                }
+            }else{
+                console.error(JSON.stringify(response.getError()))
+            }
+            component.set('v.isLoading', false);
+        }
+        
+        helper.fetchdata(component,event,callback);
+        helper.closeFilter();
+    }
+})

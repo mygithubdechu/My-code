@@ -1,0 +1,157 @@
+<aura:component controller="TimeTrendingChartReverse">
+    <ltng:require 
+                  scripts="{!join(',', $Resource.jquery, $Resource.choosen+'/chosen-package-master/chosen.jquery.min.js')}"
+                  styles="{!join(',', $Resource.choosen+'/chosen-package-master/chosen.min.css')}"
+                  afterScriptsLoaded="{!c.doInit}"
+                  />
+    
+    <aura:registerEvent name="TimeTrendingCloseFilterModal" type="c:TimeTrendingCloseFilterModal"/>
+    <aura:registerEvent name="TimeTrendingFilterData" type="c:TimeTrendingFilterData"/>
+    
+    
+    <aura:handler event="c:TimeTrendingClearData" action="{!c.doInit}"/>
+    
+    <aura:attribute name="filter" type="object" default="{}"/>
+    
+    <aura:attribute name="filter2" type="TimeTrendingChartReverse.Filter"/>
+    
+    <aura:attribute name="timePeriod" type="String"/>
+    <aura:attribute name="startDate" type="Date" />
+    <aura:attribute name="endDate" type="Date" />
+    
+    <aura:attribute name="categoryOptionMap" type="Map"/>
+    <aura:attribute name="orderTypeOptionMap" type="Map"/>
+    
+    <aura:attribute name="accounts" type="List[]"/>
+    <aura:attribute name="selectedAccount" type="String"/>
+    
+    <aura:attribute name="categories" type="List"/>
+    <aura:attribute name="selectedCategory" type="String"/>
+    
+    <aura:attribute name="ipTemplateTypes" type="List"/>
+    <aura:attribute name="selectedTemplateTypes" type="List"/>
+    <aura:attribute name="ipSelectDisabled" type="Boolean" default="true"/>
+    
+    <aura:attribute name="orderTypes" type="List"/>
+    <aura:attribute name="selectedOrderTypes" type="List"/>
+    
+    <aura:attribute name="subOrderTypes" type="List"/>
+    <aura:attribute name="selectedOrderSubType" type="List"/>
+    <aura:attribute name="orderSubTypeDisabled" type="Boolean" default="true"/>
+    
+    <aura:attribute name="ytd" type="Date"/>
+    
+    
+    <aura:attribute name="filterTypeOptions" type="List" default="[
+                                                                  {'label': 'Template Type', 'value': 'TemplateType'},
+                                                                  {'label': 'Order Type', 'value': 'OrderType'}
+                                                                  ]"/>
+    <aura:attribute name="selectedFilterType" type="String" default="TemplateType"/>
+    
+    
+    <div class="slds-modal__container">
+        <header class="slds-modal__header">
+            <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick="{!c.handleCancelClick}">
+                <lightning:icon iconName="utility:close"/>
+                <span class="slds-assistive-text">Close</span>
+            </button>
+            <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate">Filter</h2>
+        </header>
+        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+            
+            <aura:if isTrue="{!v.filter2 != null}">
+                <div style="padding: 10px 20px;">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_2-of-4">
+                            
+                            <lightning:select label="Duration" value="{!v.filter2.timeDuration}" onchange="{!c.handleTimeDurationChanged}">
+                                <option selected="true">All Time</option>
+                                <option value="YTD">YTD</option>
+                                <option value="custom">Custom</option>
+                                <optgroup label="Fiscal Year">
+                                    <option value="LAST_FISCAL_YEAR">Previos FY</option>
+                                    <option value="THIS_FISCAL_YEAR">This FY</option>
+                                </optgroup>
+                                <optgroup label="Calendar Year">
+                                    <option value="LAST_YEAR">Previos CY</option>
+                                    <option value="THIS_YEAR">This CY</option>
+                                </optgroup>
+                                <optgroup label="Quarter">
+                                    <option value="LAST_QUARTER">Previous Quarter</option>
+                                    <option value="THIS_QUARTER">This Quarter</option>
+                                </optgroup>
+                                <optgroup label="Month">
+                                    <option value="LAST_MONTH">Previous Month</option>
+                                    <option value="THIS_MONTH">This Month</option>
+                                </optgroup>
+                                <optgroup label="Week">
+                                    <option value="LAST_WEEK">Previous Week</option>
+                                    <option value="THIS_WEEK">This Week</option>
+                                </optgroup>
+                            </lightning:select>
+                            
+                        </div>
+                        <div class="slds-col slds-size_1-of-4">
+                            <lightning:input type="date" aura:id="startTime" label="Start Time" value="{!v.filter2.startDate}" disabled="{!v.filter2.timeDuration != 'custom'}" />
+                        </div>
+                        <div class="slds-col slds-size_1-of-4">
+                            <lightning:input type="date" aura:id="endTime" label="End Time" value="{!v.filter2.endDate}" disabled="{!v.filter2.timeDuration != 'custom'}" />
+                        </div>
+                    </div>
+                    
+                    <div class="slds-card" style="margin-top: 20px;">
+                        <lightning:radioGroup name="filter-type"
+                          label="Select Filter Type"
+                          options="{! v.filterTypeOptions }"
+                          value="{! v.filter2.selectedFilterType }"
+                          type="button"/>
+                    </div>
+                   
+                    <aura:if isTrue="{! v.filter2.selectedFilterType == 'TemplateType' }">
+                    	<div style="margin-top: 20px; width: 100% !important">
+                        <lightning:select label="Category" value="{!v.filter2.selectedCategory}" onchange="{!c.handleCategoryChange}">
+                            <option value="" selected="true">--None--</option>
+                            <aura:iteration items="{!v.categories}" var="category">
+                                <option value="{!category.value}"> {!category.label} </option>
+                            </aura:iteration>
+                        </lightning:select>
+                    </div>
+                        <div style="margin-top: 20px;">
+                            <lightning:select disabled="{!v.ipSelectDisabled}" label="IP Template Type" value="{!v.filter2.selectedIpTemplateType}">
+                                <option value="" selected="true">--None--</option>
+                                <aura:iteration items="{!v.ipTemplateTypes}" var="category">
+                                    <option value="{!category.value}"> {!category.label} </option>
+                                </aura:iteration>
+                            </lightning:select>
+                        </div>
+                        <aura:set attribute="else">
+                            <div style="margin-top: 20px;">
+                                <lightning:select label="Order Type" value="{!v.filter2.selectedOrderType}" onchange="{!c.handleOrderTypeChange}">
+                                    <option value="" selected="true">--None--</option>
+                                    <aura:iteration items="{!v.orderTypes}" var="order">
+                                        <option value="{!order.value}"> {!order.label} </option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                            <div style="margin-top: 20px;">
+                                <lightning:select disabled="{!v.orderSubTypeDisabled}" value="{!v.filter2.selectedOrderSubType}">
+                                    <option value="" selected="true">--None--</option>
+                                    <aura:iteration items="{!v.subOrderTypes}" var="category">
+                                        <option value="{!category.value}"> {!category.label} </option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                        </aura:set>
+                    </aura:if>
+                </div>
+                <aura:set attribute="else">
+                    <lightning:spinner></lightning:spinner>
+                </aura:set>
+            </aura:if>
+        </div>
+        <footer class="slds-modal__footer slds-modal__footer_directional">
+            <lightning:button variant="neutral" label="Cancel" onclick="{!c.handleCancelClick}"></lightning:button>
+            <lightning:button variant="brand" label="Filter" onclick="{!c.handleFilterClick}"></lightning:button>
+        </footer>
+    </div>
+</aura:component>

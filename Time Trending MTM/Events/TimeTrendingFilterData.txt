@@ -1,0 +1,3 @@
+<aura:event type="APPLICATION" description="Event get fired when user want to filter data on the basis of parameter selected in filter panel">
+    <aura:attribute name="filter" type="object"/>
+</aura:event>

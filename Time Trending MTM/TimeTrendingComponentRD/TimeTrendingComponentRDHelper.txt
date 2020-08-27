@@ -1,0 +1,44 @@
+({
+    showFilterPanel: function() {
+        //It will open Filter Pannel by using #filter-panel id adn adding class
+        $('#filter-panel').addClass('slds-fade-in-open');
+        $('.slds-backdrop').addClass('slds-backdrop_open');
+        //$('#filtericon').addClass('filtered');
+        
+    },
+    hideFilterPanel: function() {
+        $('#filter-panel').removeClass('slds-fade-in-open');
+        $('.slds-backdrop').removeClass('slds-backdrop_open')
+    },
+    hideChartPanel: function(component) {
+        component.set('v.chartVisible', true);
+         
+    },
+    toggleChartPanel: function(component) {
+        component.set('v.chartVisible', !component.get('v.chartVisible'));
+    },
+    showDetailsPanel: function(component) {
+        component.set('v.detailsVisible', true);
+    },
+    hideDetailsPanel: function(component) {
+        component.set('v.detailsVisible', false);
+    },
+    toggleDetailsPanel: function(component) {
+        component.set('v.detailsVisible', !component.get('v.detailsVisible'));
+    },
+    toggleFilterPanel : function() {
+		var appEvent = $A.get("e.c:TimeTrendingOpenFilterModal");
+        appEvent.setParams({
+            'panel': 'filter'
+        })
+        appEvent.fire();
+	},
+    
+    toggleChartPanel: function() { 
+         var appEvent = $A.get("e.c:TimeTrendingPagePanelToggle");
+        appEvent.setParams({
+            'panel': 'chart'
+        })
+        appEvent.fire();
+    },
+})
