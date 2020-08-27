@@ -1,0 +1,102 @@
+global with sharing class Data4ceMasterEditClassicController {
+    
+    public List<SelectOption> objectSelectList{set;get;}
+    public static String objString{get;set;}
+    public  List<tempWrapperaddfields> wrapperList{set;get;}
+    public Static List<Wrapperaddfields> tempwrapperList{set;get;}
+    public String CurrentsObject{get;set;}
+    public Static Map<id,String> updatedvalue{get;set;}
+    
+    
+    public Data4ceMasterEditClassicController(){
+        wrapperList= new  List<tempWrapperaddfields>();
+        System.debug('Constructor called');
+        vffieldList();
+        
+         updatedvalue= new Map<id,String>();
+       System.debug('updatedvalue :'+updatedvalue);
+    }
+    
+    @Remoteaction
+    global static List<Wrapperaddfields> fieldList(String objString){
+        tempwrapperList= new List<Wrapperaddfields>();
+        Map<String,Schema.SObjectType> describObj = Schema.getGlobalDescribe();
+        Schema.SObjectType Leadschema = describObj.get(objString);
+        
+        Map<String,Schema.SObjectField> FieldMap= Leadschema.getDescribe().fields.getMap();
+        
+        for(String fieldName:FieldMap.keyset()){
+            Schema.DescribeFieldResult  descr = FieldMap.get(fieldName).getDescribe();
+            
+            tempwrapperList.add(new Wrapperaddfields(descr.getName(),descr.getlabel(),true));
+        }
+        System.debug('updatedvalue :'+updatedvalue);
+        return tempwrapperList;
+        
+    }
+    @RemoteAction
+    global static Sobject[] allfields(String objString){
+        Schema.SObjectType convertType = Schema.getGlobalDescribe().get(objString);
+        DescribeSObjectResult describeResult = convertType.getDescribe();	
+        List<String> fieldNames = new List<String>( describeResult.fields.getMap().keySet() );	
+        String query =	  'SELECT ' + String.join(fieldNames, ', ') +' FROM ' +describeResult.getName();	
+        
+        List<SObject> records = Database.query( query );
+        System.debug('updatedvalue :'+updatedvalue);
+        return records;
+    }
+    
+    //these method is used to get all fields for Fieldmapping Vf page
+    public  List<tempWrapperaddfields> vffieldList(){
+        CurrentsObject=ApexPages.currentPage().getParameters().get('objString');
+        wrapperList= new List<tempWrapperaddfields>();
+        
+        Map<String,Schema.SObjectType> describObj = Schema.getGlobalDescribe();
+        Schema.SObjectType Leadschema = describObj.get(CurrentsObject);
+        
+        Map<String,Schema.SObjectField> FieldMap= Leadschema.getDescribe().fields.getMap();
+        
+        for(String fieldName:FieldMap.keyset()){
+            Schema.DescribeFieldResult  descr = FieldMap.get(fieldName).getDescribe();
+            
+            wrapperList.add(new tempWrapperaddfields(descr.getName(),descr.getlabel(),true));
+        }
+        System.debug('wrapperList :'+wrapperList);
+        return wrapperList;
+        
+    }
+    
+    public PageReference Excelpage(){
+        PageReference pr = new PageReference('/apex/Data4ceMasterEditClassic');
+        pr.getParameters().put('objString',CurrentsObject);
+        pr.setRedirect(true); // If you want a redirect. Do not set anything if you want a forward.
+        return pr;
+        
+    }
+    
+    global class Wrapperaddfields{
+        global boolean check{set;get;}
+        global String fieldApiName{set;get;}
+        global String fieldlabel{set;get;}
+        
+        global Wrapperaddfields( String fieldApiName,String fieldlabel, Boolean check ){
+            this.fieldApiName=fieldApiName;
+            this.fieldlabel=fieldlabel;
+            this.check=true;
+        }
+    }
+    
+    //Wrapper Class for FieldMapping Vf Page
+    public class tempWrapperaddfields{
+      
+        public boolean check{get;set;}
+        public String fieldApiName{get;set;}
+        public String fieldlabel{get;set;}
+        
+        public tempWrapperaddfields(String fieldApiName,String fieldlabel, Boolean check ){
+            this.fieldApiName=fieldApiName;
+            this.fieldlabel=fieldlabel;
+            this.check=true;
+        }
+    }
+}

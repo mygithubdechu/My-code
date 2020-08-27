@@ -1,0 +1,107 @@
+<apex:page controller="Data4ceMasterEditClassicController" showChat="false" sidebar="false" lightningStylesheets="true"   >
+    <apex:includeScript id="d4js" value="https://cdn.jsdelivr.net/npm/handsontable-pro@6.2.2/dist/handsontable.full.min.js" />
+    <apex:stylesheet id="d4css" value="{!$Resource.data4ceCSS}" />
+    <apex:form id="theForm">
+        <!--x:selectList size="1" id="sel" onchange="getRemoteAction()" >
+<apex:selectOptions value="{!objectSelectList}" id="SelectedValue"  ></apex:selectOptions>
+</apex:selectList>
+https://dechu-dev-ed--dechuvs.ap5.visual.force.com/apex/Data4ceMasterEditClassic?objString=Account
+---->   
+    </apex:form>
+    <div id="hot" > 
+    </div>
+    <button id="export-file" >Export.CSV</button>
+    <script>
+    (function(){
+        var colHeaders = []
+        var colflds = []
+        var wrapperlist='{!wrapperList}';
+        var WrapperJon=JSON.stringify(wrapperlist);
+        //alert(wrapperlist);
+        Visualforce.remoting.Manager.invokeAction(
+            '{!$RemoteAction.Data4ceMasterEditClassicController.fieldList}',
+            '{!$CurrentPage.parameters.objString}',
+            
+            function(result, event){
+                var result1=JSON.parse(JSON.stringify(result));
+                //console.log(result1);
+                if(event.status){
+                    for(var i = 0; i < result1.length; i++){
+                        colflds.push(
+                            {   
+                                data : result1[i].fieldApiName
+                            })
+                        colHeaders.push(result1[i].fieldlabel)
+                    }
+                    
+                } 
+                
+            }
+        )
+        
+        Visualforce.remoting.Manager.invokeAction(
+            '{!$RemoteAction.Data4ceMasterEditClassicController.allfields}',
+            '{!$CurrentPage.parameters.objString}',
+            
+            function(result, event){
+                var dataRecords=result; 
+                var changeElements=[{!updatedvalue}];
+                // console.log(dataRecords);
+                
+                
+                //this  is Export File Logic   
+                var container1 = document.getElementById('hot');
+                console.log('container1 '+container1);
+                var hot1 = new Handsontable(container1, {
+                    data: dataRecords,
+                    columns: colflds,
+                    //stretchH: 'all',
+                    autoWrapRow: false,
+                    maxRows: 150,
+                    manualRowResize: true,
+                    manualColumnResize: true,
+                    rowHeaders: true,
+                    colHeaders: colHeaders,
+                    manualRowMove: true,
+                    manualColumnMove: true,
+                    width: 1480,
+                    height: 600,
+                    filters: true,
+                    dropdownMenu: true,
+                    exportFile: true,
+                    manualColumnResize: true,
+                    manualRowResize: true,
+                   
+                    afterChange: function(changes) {
+                        changes.forEach(function([row, prop, oldValue, newValue])  {
+                            changeElements.push[[dataRecords[row].Id,newValue]];
+                            console.log('changeElements: '+changeElements);
+                        });
+                    }
+                });
+                    
+                var button1 = document.getElementById('export-file');
+                console.log('button1'+button1);
+                var exportPlugin1 = hot1.getPlugin('exportFile');
+                
+                button1.addEventListener('click', function() {
+                    exportPlugin1.downloadFile('csv', {
+                        bom: false,
+                        columnDelimiter: ',',
+                        columnHeaders: true,
+                        exportHiddenColumns: true,
+                        exportHiddenRows: true,
+                        fileExtension: 'csv',
+                        filename: 'Export-CSV-file_[YYYY]-[MM]-[DD]',
+                        mimeType: 'text/csv',
+                        rowDelimiter: '\r\n',
+                        //  rowHeaders: true
+                    });
+                });
+                //var hot = new Handsontable(hotElement, hotSettings);
+            }
+        )
+    })();
+    </script>
+    
+</apex:page>
