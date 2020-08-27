@@ -1,0 +1,45 @@
+public class AvrageMinAndAvgSessionHandlerClass {
+    
+    public void OnBeforeInsert(){
+        
+        set<id>idss=new set<id>();
+        for(QuoteLineItem qol:(List<QuoteLineItem>)trigger.new){
+            system.debug('idd  ++'+ qol.Quoteid);
+            idss.add(qol.Quoteid);
+        }
+        
+        List<QuoteLineItem> QLI=new list<QuoteLineItem>();
+        
+        set<id> idq=new set<id>();
+        
+        List<Quote> quoteIds=new List<Quote>([select id,opportunityid from Quote where id=:idss]);
+        
+        for(Quote qa:quoteIds){
+            idq.add(qa.opportunityid);
+        }
+        
+        List<OpportunityLineItem> opl=new List<OpportunityLineItem>();
+         opl = ([select id, Avg_Mins_per_Week__c, Avg_Session_per_Wk__c from OpportunityLineItem where Opportunityid IN :idq ]);
+        
+       //  opl =([select id, Product2Id, Avg_Mins_per_Week__c, Avg_Session_per_Wk__c from OpportunityLineItem where Product2Id =:QuoteLineitem.Product2Id and Opportunityid =:Quote.Opportunityid]);
+        
+        if(opl.size() > 0)
+        {
+            List<OpportunityLineItem__c> LineItemCustomSetting = OpportunityLineItem__c.getAll().values();
+            
+            for(QuoteLineItem qol:(List<QuoteLineItem>)trigger.new){
+                
+                for(OpportunityLineItem lineItem: opl){
+                    
+                    for(OpportunityLineItem__c customSetting : LineItemCustomSetting){
+                        if(customSetting.Opportunity_line_item_Source__c != null){
+                            qol.put(customSetting.Quote_line_item_Destination__c, lineItem.get(customSetting.Opportunity_line_item_Source__c));
+                        }
+                    }
+                    
+                    
+                }
+            }
+        }
+    }
+}
